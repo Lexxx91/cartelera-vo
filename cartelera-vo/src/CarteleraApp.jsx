@@ -115,86 +115,45 @@ async function groupUpdateVotes(code, votes) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// API
 // ─────────────────────────────────────────────────────────────────────────────
-async function fetchMoviesFromClaude(cinema, date) {
-  const dateLabel = date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: "Responde ÚNICAMENTE con JSON puro. Sin markdown. Sin backticks. Sin texto extra. Empieza con { directamente.",
-      messages: [{
-        role: "user",
-        content: `Cartelera VO para "${cinema.name}" Las Palmas de Gran Canaria el ${dateLabel}.
-Responde SOLO con JSON (sin \`\`\`, empieza con {):
-{"movies":[{"title":"string","originalTitle":"string en inglés","genre":"string","duration":110,"rating":"7.8","letterboxd":"3.9","synopsis":"max 100 chars","showtimes":["17:30","20:00","22:15"],"language":"Inglés","director":"string","year":2025,"awards":"string","studio":"string"}]}
-Incluye 4-5 películas de estreno reales 2024-2025 que actualmente estén en cartelera en España. Géneros variados. Letterboxd entre 3.2 y 4.5. El campo originalTitle debe ser el título original en inglés exacto para búsqueda en TMDB.`
-      }],
-    }),
+// API — reads from Supabase cartelera table (populated daily by scraper)
+// ─────────────────────────────────────────────────────────────────────────────
+const SUPABASE_URL = "https://iikxvjegaqspaweysgfg.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa3h2amVnYXFzcGF3ZXlzZ2ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MTMwMjcsImV4cCI6MjA4ODQ4OTAyN30.8Asky185LFqyCD1YEO8MTgLKmbeDmvglcFJFee94J_A";
+
+async function fetchMoviesFromSupabase(cinema, date) {
+  const dateStr = date.toISOString().split("T")[0];
+  const url = `${SUPABASE_URL}/rest/v1/cartelera?cinema_id=eq.${cinema.id}&date=eq.${dateStr}&order=title.asc`;
+  const res = await fetch(url, {
+    headers: {
+      "apikey": SUPABASE_ANON,
+      "Authorization": `Bearer ${SUPABASE_ANON}`,
+    }
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
-  const textBlock = data.content?.find(b => b.type === "text");
-  if (!textBlock) throw new Error("Sin respuesta");
-  let raw = textBlock.text.trim().replace(/^```[\w]*\n?/gm,"").replace(/```\s*$/gm,"").trim();
-  const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
-  if (s === -1 || e === -1) throw new Error("JSON no encontrado");
-  const parsed = JSON.parse(raw.substring(s, e + 1));
-  if (!Array.isArray(parsed.movies)) throw new Error("Sin array movies");
-  return parsed.movies;
+  if (!res.ok) throw new Error(`Supabase error ${res.status}`);
+  const rows = await res.json();
+  if (rows.length === 0) return [];
+  return rows.map(r => ({
+    title: r.title,
+    originalTitle: r.original_title || r.title,
+    genre: r.genre || "",
+    duration: r.duration ? parseInt(r.duration) : null,
+    rating: r.rating_media ? String(r.rating_media) : null,
+    letterboxd: null,
+    synopsis: "",
+    showtimes: Array.isArray(r.showtimes) ? r.showtimes : [],
+    language: r.version || "VOSE",
+    director: "",
+    year: null,
+    awards: "",
+    studio: "",
+    poster: r.poster || null,
+  }));
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POSTER FETCHER — uses TMDB public image CDN via Claude AI for path lookup
-// ─────────────────────────────────────────────────────────────────────────────
-const posterCache = {};
-
-async function fetchPoster(title, originalTitle, year, tmdbId) {
-  const key = tmdbId ? `id:${tmdbId}` : (originalTitle || title) + (year || "");
-  if (posterCache[key] !== undefined) return posterCache[key];
-
-  // If we already have a tmdb_id from the movie data, build URL directly
-  if (tmdbId) {
-    // We still need the poster_path — use Claude to look it up
-  }
-
-  try {
-    const query = originalTitle || title;
-    const prompt = `Give me ONLY the TMDB poster_path for the movie "${query}" (${year || "recent"}). 
-The poster_path looks like "/abc123xyz.jpg". 
-Respond with ONLY the poster_path string starting with /, nothing else. 
-If you don't know it exactly, respond with: null`;
-
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 60,
-        system: "You are a movie database assistant. Respond with ONLY the requested data, no explanations.",
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const data = await res.json();
-    const raw = data.content?.[0]?.text?.trim() || "null";
-    
-    if (raw === "null" || !raw.startsWith("/")) {
-      posterCache[key] = null;
-      return null;
-    }
-    
-    const url = `https://image.tmdb.org/t/p/w342${raw}`;
-    posterCache[key] = url;
-    return url;
-  } catch {
-    posterCache[key] = null;
-    return null;
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SMALL COMPONENTS
@@ -279,10 +238,11 @@ function MovieCard({ movie, index, cinema, day, onWatched, isWatched, alerts, gr
   const [g0, g1] = GRADIENTS[index % GRADIENTS.length];
 
   useEffect(() => {
-    fetchPoster(movie.title, movie.originalTitle, movie.year).then(url => {
-      setPoster(url);
-    });
-  }, [movie.title]);
+    // Poster comes directly from Supabase (scraped from Sensacine)
+    if (movie.poster) {
+      setPoster(movie.poster);
+    }
+  }, [movie.poster]);
 
   const matchesAlert = alerts.some(a =>
     (a.type === "director" && movie.director?.toLowerCase().includes(a.value.toLowerCase())) ||
@@ -940,7 +900,7 @@ function CartelleraTab({ alerts, watched, onWatched, groupCode, groupMember, gro
     if (cacheRef.current[key]) { setMovies(cacheRef.current[key]); setError(null); return; }
     setLoading(true); setMovies([]); setError(null);
     try {
-      const r = await fetchMoviesFromClaude(CINEMAS[ci], days[di].date);
+      const r = await fetchMoviesFromSupabase(CINEMAS[ci], days[di].date);
       cacheRef.current[key] = r; setMovies(r); setLastUpdated(new Date());
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
@@ -951,7 +911,7 @@ function CartelleraTab({ alerts, watched, onWatched, groupCode, groupMember, gro
     for (let di = 0; di < days.length; di++) {
       for (let ci = 0; ci < CINEMAS.length; ci++) {
         try {
-          const r = await fetchMoviesFromClaude(CINEMAS[ci], days[di].date);
+          const r = await fetchMoviesFromSupabase(CINEMAS[ci], days[di].date);
           if (r?.length > 0) {
             const key = `${ci}-${di}`;
             cacheRef.current[key] = r;
