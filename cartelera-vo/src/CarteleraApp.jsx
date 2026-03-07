@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase.js'
 
+const CINEMAS = [
+  { id: "ocine", name: "OCine 7 Palmas Premium", address: "C.C. Siete Palmas, Av. Pintor Felo Monzón", emoji: "🎪" },
+  { id: "arenas", name: "Yelmo Cine Las Arenas", address: "C.C. Las Arenas, Ctra. del Rincón", emoji: "🎭" },
+  { id: "alisios", name: "Yelmo Premium Alisios", address: "C.C. Alisios, Calle Hermanos Domínguez", emoji: "🎬" },
+];
+const GENRES = ["Acción","Comedia","Drama","Terror","Sci-Fi","Thriller","Animación","Documental","Romance","Fantasía"];
+const DIRECTORS_POOL = ["Christopher Nolan","Yorgos Lanthimos","Greta Gerwig","Denis Villeneuve","Paul Thomas Anderson","Celine Sciamma","Barry Jenkins","Bong Joon-ho","Pedro Almodóvar","Sofia Coppola"];
+const AWARD_TAGS = ["🏆 Oscar Mejor Película","🌴 Palma de Oro Cannes","🦁 León de Oro Venecia","⭐ Sundance Grand Jury","🎬 A24","🎭 BAFTA","🌟 Sección Oficial Cannes","🏅 Globo de Oro"];
+
 const GRADIENTS = [
   ["#0f0c29","#302b63"],["#1a1a2e","#16213e"],["#0d1117","#1c2333"],
   ["#1e3a5f","#0d2137"],["#2d1b69","#11023e"],["#1a0a2e","#3d1168"],
@@ -1133,7 +1142,7 @@ export default function CarteleraApp({ user, onLogout }) {
         .from("perfiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) {
         if (profile.watched) setWatched(profile.watched);
