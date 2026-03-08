@@ -423,6 +423,233 @@ function MovieCard({ movie, index, cinema, day, onWatched, isWatched, alerts, gr
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PLAN SHEET
+//
+// STATE MACHINE:
+//  "proposed"     → App propone el mejor hueco. Yo respondo SÍ o NO.
+//  "waiting_them" → Yo dije SÍ. Espero a que el otro responda.
+//                   SÍ → "confirmed" / NO → "pick_theirs"
+//  "pick_avail"   → Yo dije NO. Marco mis días disponibles → "waiting_me"
+//  "waiting_me"   → Envié mis días. El otro está eligiendo.
+//                   Elige uno → "confirmed" / Ninguna → "no_match"
+//  "pick_theirs"  → El otro mandó su disponibilidad. Yo elijo una o cierro.
+//                   Elijo → "confirmed" / Ninguna → "no_match"
+//  "confirmed"    → Plan cerrado. Ruleta + importe.
+//  "no_match"     → Sin fechas en común. Fin.
+//
+// REGLA DE ORO: el que dice NO nunca confirma — solo ofrece opciones.
+//               Siempre confirma el último en responder eligiendo una fecha.
+// ─────────────────────────────────────────────────────────────────────────────
+function sKey(s) { return `${s.day}||${s.cinema}||${s.time}`; }
+
+function PlanSheet({ movie, matchPartner, sessions, plan: propPlan, onUpdate, onClose }) {
+  const bestSlot = sessions[0];
+  const [state,    setState]   = useState(propPlan?.state    || "proposed");
+  const [myAvail,  setMyAvail] = useState(propPlan?.myAvail  || []);
+  const [chosen,   setChosen]  = useState(propPlan?.chosen   || null);
+  const [buyer,    setBuyer]   = useState(propPlan?.buyer    || null);
+  const [amount,   setAmount]  = useState(propPlan?.amount   || "");
+  const [showRoul, setShowRoul] = useState(false);
+
+  const partnerAvail = sessions.slice(1); // simulated: partner can't do the best slot
+
+  function save(patch) {
+    onUpdate({ ...(propPlan || {}), ...patch });
+  }
+  function transition(newState, extra = {}) {
+    setState(newState);
+    save({ state: newState, myAvail, chosen, ...extra });
+  }
+
+  function iSayYes() {
+    transition("waiting_them");
+    setTimeout(() => {
+      setState("confirmed"); setChosen(bestSlot);
+      save({ state: "confirmed", chosen: bestSlot });
+    }, 800);
+  }
+  function iSayNo() { transition("pick_avail"); }
+  function toggleAvail(s) {
+    const k = sKey(s);
+    setMyAvail(prev => prev.find(x => sKey(x) === k) ? prev.filter(x => sKey(x) !== k) : [...prev, s]);
+  }
+  function isMarked(s) { return !!myAvail.find(x => sKey(x) === sKey(s)); }
+  function sendMyAvail() {
+    if (!myAvail.length) return;
+    transition("waiting_me", { myAvail });
+    setTimeout(() => {
+      const pick = myAvail[0];
+      setState("confirmed"); setChosen(pick);
+      save({ state: "confirmed", chosen: pick, myAvail });
+    }, 1000);
+  }
+  function pickFromPartner(s) {
+    setState("confirmed"); setChosen(s);
+    save({ state: "confirmed", chosen: s });
+  }
+  function declareNoMatch() { transition("no_match"); }
+
+  const sh = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, padding: "20px", marginBottom: 20, textAlign: "center" };
+
+  if (showRoul) return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.96)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <button onClick={() => setShowRoul(false)} style={{ position: "absolute", top: 20, right: 20, width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", fontSize: 18, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+      <h3 style={{ margin: "0 0 20px", fontSize: 20, fontWeight: 800 }}>¿Quién adelanta?</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 280 }}>
+        {[{ id: "me", name: "Tú" }, matchPartner].map(m => (
+          <button key={m.id} onClick={() => { setBuyer(m); setShowRoul(false); save({ state: "confirmed", chosen, buyer: m }); }}
+            style={{ padding: "14px", borderRadius: 14, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            {m.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.72)" }} />
+      <div style={{ position: "relative", background: "#111", borderRadius: "24px 24px 0 0", border: "1px solid rgba(255,255,255,0.08)", padding: "0 20px 44px", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "12px auto 20px" }} />
+
+        {/* Header */}
+        <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>{movie.title}</p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0 }}>Plan con {matchPartner.name}</p>
+        </div>
+
+        {/* PROPOSED */}
+        {state === "proposed" && (
+          <>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>Mejor opción disponible</p>
+            <div style={sh}>
+              <p style={{ fontSize: 28, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>{bestSlot.day}</p>
+              <p style={{ fontSize: 40, fontWeight: 800, color: "#fff", letterSpacing: "-2px", margin: "0 0 8px", lineHeight: 1 }}>{bestSlot.time}</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>📍 {bestSlot.cinema}</p>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={iSayNo} style={{ flex: 1, padding: 16, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>No puedo</button>
+              <button onClick={iSayYes} style={{ flex: 2, padding: 16, borderRadius: 14, background: "#fff", color: "#000", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Perfecto ✓</button>
+            </div>
+          </>
+        )}
+
+        {/* WAITING_THEM */}
+        {state === "waiting_them" && (
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <p style={{ fontSize: 40, margin: "0 0 14px" }}>⏳</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#fff", margin: "0 0 6px" }}>Esperando a {matchPartner.name}…</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0 }}>Le hemos enviado la propuesta. Te avisaremos cuando responda.</p>
+            <button onClick={() => { transition("pick_theirs"); }} style={{ marginTop: 24, padding: "11px 20px", borderRadius: 100, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+              Simular: {matchPartner.name.split(" ")[0]} no puede → ver sus fechas
+            </button>
+          </div>
+        )}
+
+        {/* PICK_AVAIL */}
+        {state === "pick_avail" && (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>¿Qué días puedes?</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "0 0 18px", lineHeight: 1.6 }}>Marca todas las opciones que te vienen bien. {matchPartner.name.split(" ")[0]} elegirá la que mejor le encaje.</p>
+            {(() => {
+              const byDay = {};
+              sessions.forEach(s => { if (!byDay[s.day]) byDay[s.day] = []; byDay[s.day].push(s); });
+              return Object.entries(byDay).map(([day, slots]) => (
+                <div key={day} style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", margin: "0 0 8px" }}>{day}</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {slots.map(s => {
+                      const sel = isMarked(s);
+                      return (
+                        <button key={sKey(s)} onClick={() => toggleAvail(s)} style={{ padding: "9px 16px", borderRadius: 11, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.18s", background: sel ? "rgba(52,199,89,0.15)" : "rgba(255,255,255,0.06)", color: sel ? "#34c759" : "rgba(255,255,255,0.5)", border: sel ? "1.5px solid rgba(52,199,89,0.4)" : "1px solid rgba(255,255,255,0.09)" }}>
+                          {sel && "✓ "}{s.time}
+                          <span style={{ display: "block", fontSize: 10, marginTop: 1, color: sel ? "rgba(52,199,89,0.6)" : "rgba(255,255,255,0.22)" }}>{s.cinema.split(" ")[0]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
+            <button onClick={sendMyAvail} disabled={!myAvail.length} style={{ width: "100%", marginTop: 8, padding: 15, borderRadius: 13, fontSize: 15, fontWeight: 700, cursor: myAvail.length ? "pointer" : "not-allowed", fontFamily: "inherit", background: myAvail.length ? "#fff" : "rgba(255,255,255,0.07)", color: myAvail.length ? "#000" : "rgba(255,255,255,0.2)", border: "none" }}>
+              Enviar disponibilidad a {matchPartner.name.split(" ")[0]}
+            </button>
+          </>
+        )}
+
+        {/* WAITING_ME */}
+        {state === "waiting_me" && (
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <p style={{ fontSize: 40, margin: "0 0 14px" }}>⏳</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#fff", margin: "0 0 6px" }}>Esperando a {matchPartner.name}…</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0 }}>Le hemos enviado tus fechas. {matchPartner.name.split(" ")[0]} elegirá la que mejor le venga.</p>
+          </div>
+        )}
+
+        {/* PICK_THEIRS */}
+        {state === "pick_theirs" && (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>{matchPartner.name.split(" ")[0]} puede en estas fechas</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "0 0 18px", lineHeight: 1.6 }}>Elige la que mejor te venga. El plan se confirma al instante.</p>
+            {partnerAvail.map(s => (
+              <button key={sKey(s)} onClick={() => pickFromPartner(s)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: 16, borderRadius: 14, marginBottom: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}>
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 16, fontWeight: 700, color: "#fff" }}>{s.day} · {s.time}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>📍 {s.cinema}</p>
+                </div>
+                <span style={{ fontSize: 20, color: "rgba(255,255,255,0.25)" }}>›</span>
+              </button>
+            ))}
+            <button onClick={declareNoMatch} style={{ width: "100%", marginTop: 4, padding: 13, borderRadius: 13, background: "transparent", border: "1px solid rgba(255,69,58,0.2)", color: "rgba(255,69,58,0.55)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Ninguna me viene bien
+            </button>
+          </>
+        )}
+
+        {/* CONFIRMED */}
+        {state === "confirmed" && chosen && (
+          <>
+            <div style={{ background: "rgba(52,199,89,0.07)", border: "1px solid rgba(52,199,89,0.2)", borderRadius: 16, padding: 18, marginBottom: 16, textAlign: "center" }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "#34c759", letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 10px" }}>Plan confirmado ✓</p>
+              <p style={{ fontSize: 26, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>{chosen.day} · {chosen.time}</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>📍 {chosen.cinema}</p>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 16, marginBottom: 16 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.35)", margin: "0 0 12px" }}>🎰 ¿Quién compra las entradas?</p>
+              {!buyer ? (
+                <button onClick={() => setShowRoul(true)} style={{ width: "100%", padding: 12, borderRadius: 11, background: "rgba(255,214,10,0.1)", border: "1px solid rgba(255,214,10,0.25)", color: "#ffd60a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Elegir quién adelanta</button>
+              ) : (
+                <>
+                  <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: "#fff" }}>{buyer.name === "Tú" ? "Tú adelantas" : `${buyer.name} adelanta`} las entradas</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.05)", borderRadius: 11, padding: "10px 14px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ fontSize: 17, color: "rgba(255,255,255,0.4)" }}>€</span>
+                    <input type="number" placeholder="Total entradas" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1, background: "transparent", border: "none", fontSize: 16, fontWeight: 600, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+                  </div>
+                  {amount && <p style={{ margin: "8px 0 0", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>€{(parseFloat(amount) / 2).toFixed(2)} por persona</p>}
+                </>
+              )}
+            </div>
+            <button onClick={() => { save({ state: "confirmed", chosen, buyer, amount }); onClose(); }} style={{ width: "100%", padding: 15, borderRadius: 13, background: "#fff", color: "#000", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: "none" }}>
+              Guardar plan
+            </button>
+          </>
+        )}
+
+        {/* NO_MATCH */}
+        {state === "no_match" && (
+          <div style={{ textAlign: "center", padding: "32px 0 16px" }}>
+            <p style={{ fontSize: 36, margin: "0 0 16px" }}>😔</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: "0 0 8px" }}>Sin fechas en común</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.7, margin: "0 0 28px" }}>No hay ninguna sesión que os venga bien a los dos.</p>
+            <button onClick={onClose} style={{ padding: "13px 28px", borderRadius: 100, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cerrar</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GROUP TAB
 // ─────────────────────────────────────────────────────────────────────────────
 function GroupTab({ groupCode, groupMember, onCreateGroup, onJoinGroup, onLeaveGroup, groupData, groupVotes, onSwitchToCartelera }) {
@@ -432,6 +659,8 @@ function GroupTab({ groupCode, groupMember, onCreateGroup, onJoinGroup, onLeaveG
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState("main"); // main | create | join
+  const [plans, setPlans] = useState({}); // { movieKey: planObj }
+  const [planOpen, setPlanOpen] = useState(null); // { movieTitle, key, sessions, partner }
 
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -541,7 +770,18 @@ function GroupTab({ groupCode, groupMember, onCreateGroup, onJoinGroup, onLeaveG
 
   // Group dashboard
   return (
-    <div style={{ padding: "20px 20px 100px" }}>
+    <div style={{ padding: "20px 20px 100px", position: "relative" }}>
+      {/* PLAN SHEET OVERLAY */}
+      {planOpen && (
+        <PlanSheet
+          movie={{ title: planOpen.movieTitle }}
+          matchPartner={planOpen.partner}
+          sessions={planOpen.sessions}
+          plan={plans[planOpen.key] || null}
+          onUpdate={p => setPlans(prev => ({ ...prev, [planOpen.key]: p }))}
+          onClose={() => setPlanOpen(null)}
+        />
+      )}
       {/* Group header */}
       <div style={{ borderRadius: 22, background: "linear-gradient(145deg, #1a1a2e, #302b63)", border: "1px solid rgba(255,255,255,0.12)", padding: "22px", marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -684,6 +924,23 @@ function GroupTab({ groupCode, groupMember, onCreateGroup, onJoinGroup, onLeaveG
                     ))}
                   </div>
                 )}
+                {/* Plan button — shown on full matches */}
+                {votes === totalMembers && totalMembers > 1 && (() => {
+                  const plan = plans[key];
+                  const cinema = CINEMAS.find(c => c.id === cinemaId);
+                  const sessions = (data.showtimes || []).map(t => ({ day: dayLabel, cinema: cinema?.name || cinemaId, time: t }));
+                  const otherMembers = Object.values(members).filter(m => m.id !== groupMember?.id);
+                  const partner = otherMembers[0] || { id: "?", name: "tu amigo" };
+                  const chipTxt = !plan ? "⚡ Organizar sesión" : plan.state === "confirmed" ? "✓ Ver plan →" : plan.state === "waiting_them" || plan.state === "waiting_me" ? "⏳ Esperando respuesta…" : plan.state === "pick_avail" ? "📅 Marcar disponibilidad →" : plan.state === "pick_theirs" ? "🎯 Elige una fecha →" : plan.state === "no_match" ? "Sin fechas en común" : "⚡ Organizar sesión";
+                  const isWaiting = plan?.state === "waiting_them" || plan?.state === "waiting_me";
+                  return (
+                    <button
+                      onClick={() => { if (!isWaiting) setPlanOpen({ movieTitle: title, key, sessions, partner }); }}
+                      style={{ marginTop: 10, padding: "9px 16px", borderRadius: 11, fontSize: 12, fontWeight: 700, cursor: isWaiting ? "default" : "pointer", fontFamily: "inherit", background: plan?.state === "confirmed" ? "rgba(255,214,10,0.1)" : "rgba(52,199,89,0.1)", border: plan?.state === "confirmed" ? "1px solid rgba(255,214,10,0.3)" : "1px solid rgba(52,199,89,0.3)", color: plan?.state === "confirmed" ? "#ffd60a" : "#34c759" }}>
+                      {chipTxt}
+                    </button>
+                  );
+                })()}
               </div>
             );
           })}
