@@ -2,17 +2,33 @@ import { useRef, useEffect, useState, useCallback } from 'react'
 import { SUPABASE_URL, SUPABASE_ANON } from '../../constants.js'
 
 // ─── Brick Breaker — Cinema Edition ──────────────────────────────────────────
-// Canvas game with leaderboard backed by Supabase game_scores table
+// Canvas game with levels + leaderboard backed by Supabase game_scores table
 
-const BRICK_ROWS = 4
-const BRICK_COLS = 7
 const BRICK_PAD = 4
 const BALL_R = 6
 const PADDLE_H = 12
 const PADDLE_W = 80
 const BALL_SPEED = 4.5
-const BRICK_COLORS = ['#ff3b3b', 'rgba(255,255,255,0.35)', '#ff3b3b', 'rgba(255,255,255,0.18)']
-const BRICK_POINTS = [10, 20, 10, 15]
+const BRICK_COLORS = ['#ff3b3b', 'rgba(255,255,255,0.35)', '#ff3b3b', 'rgba(255,255,255,0.18)', '#ff3b3b', 'rgba(255,255,255,0.25)']
+const BRICK_POINTS = [10, 20, 10, 15, 10, 20]
+
+// Level definitions
+const LEVELS = [
+  { rows: 4, cols: 7, speedMult: 1.0,  multiHitRatio: 0,    indestructible: 0 },
+  { rows: 5, cols: 7, speedMult: 1.15, multiHitRatio: 0.25, indestructible: 0 },
+  { rows: 5, cols: 8, speedMult: 1.3,  multiHitRatio: 0.4,  indestructible: 1 },
+  { rows: 6, cols: 8, speedMult: 1.45, multiHitRatio: 0.5,  indestructible: 0 },
+]
+
+function getLevelConfig(level) {
+  if (level <= LEVELS.length) return LEVELS[level - 1]
+  return {
+    rows: 6, cols: 8,
+    speedMult: 1 + level * 0.15,
+    multiHitRatio: Math.min(0.8, 0.3 + level * 0.1),
+    indestructible: Math.min(3, Math.floor(level / 3)),
+  }
+}
 
 const GAME_OVER_MSGS = [
   "¡Corte!",
@@ -26,13 +42,21 @@ const WIN_MSGS = [
   "Toma buena, chacho",
   "Aplausos en la sala",
 ]
+const LEVEL_UP_MSGS = [
+  "Preparate...",
+  "Esto se pone serio, chacho",
+  "Pal siguiente nivel",
+  "Vamos alla",
+]
 
 export default function BrickBreaker({ user, onClose }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
   const gameRef = useRef(null)
-  const [gameState, setGameState] = useState('idle') // idle | playing | gameOver | won
+  const [gameState, setGameState] = useState('idle') // idle | playing | gameOver | won | levelComplete
   const [score, setScore] = useState(0)
+  const [level, setLevel] = useState(1)
+  const [showLevelTransition, setShowLevelTransition] = useState(false)
   const [leaderboard, setLeaderboard] = useState([])
   const [loadingRank, setLoadingRank] = useState(false)
   const [endMsg, setEndMsg] = useState('')
@@ -40,24 +64,46 @@ export default function BrickBreaker({ user, onClose }) {
   const isDemoMode = user?.isDemo === true
 
   // ─── Init game state ────────────────────────────────────────────────
-  const initGame = useCallback((canvas) => {
+  const initGame = useCallback((canvas, currentLevel = 1, carryScore = 0) => {
     const W = canvas.width
     const H = canvas.height
-    const brickW = (W - BRICK_PAD * (BRICK_COLS + 1)) / BRICK_COLS
+    const config = getLevelConfig(currentLevel)
+    const brickW = (W - BRICK_PAD * (config.cols + 1)) / config.cols
     const brickH = 18
 
     const bricks = []
-    for (let r = 0; r < BRICK_ROWS; r++) {
-      for (let c = 0; c < BRICK_COLS; c++) {
+    let indestructiblePlaced = 0
+    for (let r = 0; r < config.rows; r++) {
+      for (let c = 0; c < config.cols; c++) {
+        const colorIdx = r % BRICK_COLORS.length
+        let hits = 1
+
+        // Multi-hit bricks based on level ratio (skip first row)
+        if (r > 0 && Math.random() < config.multiHitRatio) {
+          hits = currentLevel >= 4 ? (Math.random() < 0.3 ? 3 : 2) : 2
+        }
+
+        // Indestructible bricks (placed in middle rows)
+        let isIndestructible = false
+        if (indestructiblePlaced < config.indestructible && r >= 1 && r <= config.rows - 2 && Math.random() < 0.2) {
+          isIndestructible = true
+          indestructiblePlaced++
+          hits = 999
+        }
+
         bricks.push({
           x: BRICK_PAD + c * (brickW + BRICK_PAD),
           y: 40 + r * (brickH + BRICK_PAD),
           w: brickW,
           h: brickH,
-          color: BRICK_COLORS[r],
-          points: BRICK_POINTS[r],
+          color: isIndestructible ? 'rgba(255,255,255,0.08)' : BRICK_COLORS[colorIdx],
+          baseColor: BRICK_COLORS[colorIdx],
+          points: isIndestructible ? 0 : BRICK_POINTS[colorIdx] * (hits > 1 ? 2 : 1),
           alive: true,
           flash: 0,
+          hits,
+          maxHits: hits,
+          indestructible: isIndestructible,
         })
       }
     }
@@ -67,10 +113,11 @@ export default function BrickBreaker({ user, onClose }) {
       paddle: { x: W / 2 - PADDLE_W / 2, y: H - 30, w: PADDLE_W, h: PADDLE_H },
       ball: { x: W / 2, y: H - 30 - BALL_R - 2, dx: BALL_SPEED * 0.7, dy: -BALL_SPEED * 0.7 },
       bricks,
-      score: 0,
+      score: carryScore,
       state: 'idle', // internal state for the game loop
       particles: [],
-      speedMult: 1,
+      speedMult: config.speedMult,
+      level: currentLevel,
     }
   }, [])
 
@@ -89,13 +136,12 @@ export default function BrickBreaker({ user, onClose }) {
       canvas.style.height = rect.height + 'px'
       const ctx = canvas.getContext('2d')
       ctx.scale(dpr, dpr)
-      // Store logical size
       canvas._logW = rect.width
       canvas._logH = rect.height
     }
     resize()
 
-    const g = initGame({ width: container.getBoundingClientRect().width, height: container.getBoundingClientRect().height })
+    const g = initGame({ width: container.getBoundingClientRect().width, height: container.getBoundingClientRect().height }, 1, 0)
     gameRef.current = g
 
     let rafId
@@ -114,14 +160,31 @@ export default function BrickBreaker({ user, onClose }) {
       // Bricks
       g.bricks.forEach(b => {
         if (!b.alive) return
-        ctx.fillStyle = b.color
-        if (b.flash > 0) {
-          ctx.fillStyle = '#fff'
-          b.flash--
+
+        if (b.indestructible) {
+          // Hatched/distinct style for indestructible
+          ctx.fillStyle = 'rgba(255,255,255,0.06)'
+          ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          roundRect(ctx, b.x, b.y, b.w, b.h, 4)
+          ctx.fill()
+          ctx.stroke()
+          return
         }
+
+        ctx.fillStyle = b.flash > 0 ? '#fff' : b.color
+        if (b.flash > 0) b.flash--
         ctx.beginPath()
         roundRect(ctx, b.x, b.y, b.w, b.h, 4)
         ctx.fill()
+
+        // Multi-hit border indicator
+        if (b.maxHits > 1 && b.hits > 0 && !b.indestructible) {
+          ctx.strokeStyle = '#fff'
+          ctx.lineWidth = b.hits >= 3 ? 2.5 : 1.5
+          ctx.stroke()
+        }
       })
 
       // Particles
@@ -161,7 +224,7 @@ export default function BrickBreaker({ user, onClose }) {
       ctx.fillStyle = 'rgba(255,255,255,0.5)'
       ctx.font = '600 12px "DM Sans", sans-serif'
       ctx.textAlign = 'left'
-      ctx.fillText(`SCORE: ${g.score}`, 12, 24)
+      ctx.fillText(`NIVEL ${g.level}  |  ${g.score} pts`, 12, 24)
 
       // Idle hint
       if (g.state === 'idle') {
@@ -198,9 +261,8 @@ export default function BrickBreaker({ user, onClose }) {
         g.ball.x >= g.paddle.x - 4 &&
         g.ball.x <= g.paddle.x + g.paddle.w + 4
       ) {
-        // Spin: offset from center of paddle affects dx
-        const hitPos = (g.ball.x - g.paddle.x) / g.paddle.w // 0..1
-        const angle = (hitPos - 0.5) * Math.PI * 0.7 // -70° to +70°
+        const hitPos = (g.ball.x - g.paddle.x) / g.paddle.w
+        const angle = (hitPos - 0.5) * Math.PI * 0.7
         const speed = Math.sqrt(g.ball.dx ** 2 + g.ball.dy ** 2)
         g.ball.dx = Math.sin(angle) * speed
         g.ball.dy = -Math.abs(Math.cos(angle) * speed)
@@ -227,48 +289,83 @@ export default function BrickBreaker({ user, onClose }) {
           g.ball.y + BALL_R > b.y &&
           g.ball.y - BALL_R < b.y + b.h
         ) {
-          b.alive = false
-          b.flash = 3
-          g.ball.dy = -g.ball.dy
-          g.score += b.points
-          setScore(g.score)
-
-          // Spawn particles
-          for (let i = 0; i < 6; i++) {
-            g.particles.push({
-              x: b.x + b.w / 2,
-              y: b.y + b.h / 2,
-              vx: (Math.random() - 0.5) * 4,
-              vy: (Math.random() - 0.5) * 3,
-              color: b.color === '#ff3b3b' ? '#ff3b3b' : '#fff',
-              life: 20 + Math.random() * 15,
-              maxLife: 35,
-            })
+          if (b.indestructible) {
+            // Bounce off but don't destroy
+            g.ball.dy = -g.ball.dy
+            b.flash = 3
+            return
           }
 
-          // Check if row is clear
-          const rowIdx = Math.floor((b.y - 40) / (18 + BRICK_PAD))
-          const rowBricks = g.bricks.filter(bb => Math.floor((bb.y - 40) / (18 + BRICK_PAD)) === rowIdx)
-          if (rowBricks.every(bb => !bb.alive)) {
-            rowsCleared.add(rowIdx)
+          b.hits--
+          g.ball.dy = -g.ball.dy
+
+          if (b.hits <= 0) {
+            b.alive = false
+            g.score += b.points
+            setScore(g.score)
+
+            // Spawn particles
+            for (let i = 0; i < 6; i++) {
+              g.particles.push({
+                x: b.x + b.w / 2,
+                y: b.y + b.h / 2,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 3,
+                color: b.baseColor === '#ff3b3b' ? '#ff3b3b' : '#fff',
+                life: 20 + Math.random() * 15,
+                maxLife: 35,
+              })
+            }
+
+            // Check if row is clear
+            const rowIdx = Math.floor((b.y - 40) / (18 + BRICK_PAD))
+            const rowBricks = g.bricks.filter(bb => Math.floor((bb.y - 40) / (18 + BRICK_PAD)) === rowIdx && !bb.indestructible)
+            if (rowBricks.every(bb => !bb.alive)) {
+              rowsCleared.add(rowIdx)
+            }
+          } else {
+            b.flash = 3
+            // Visual feedback: dim color to show remaining hits
+            const ratio = b.hits / b.maxHits
+            if (b.baseColor === '#ff3b3b') {
+              b.color = `rgba(255,59,59,${0.4 + ratio * 0.6})`
+            } else {
+              b.color = `rgba(255,255,255,${0.12 + ratio * 0.23})`
+            }
           }
         }
       })
 
-      // Row clear bonus
+      // Row clear bonus (scales with level)
       if (rowsCleared.size > 0) {
-        g.score += rowsCleared.size * 50
+        const levelBonus = 50 + (g.level - 1) * 10
+        g.score += rowsCleared.size * levelBonus
         setScore(g.score)
-        g.speedMult = Math.min(1.6, g.speedMult + rowsCleared.size * 0.1)
       }
 
-      // Win check
-      if (g.bricks.every(b => !b.alive)) {
-        g.state = 'won'
-        setGameState('won')
+      // Win check — only count non-indestructible bricks
+      if (g.bricks.filter(b => !b.indestructible).every(b => !b.alive)) {
+        g.state = 'levelComplete'
+        setGameState('levelComplete')
         setScore(g.score)
-        setEndMsg(WIN_MSGS[Math.floor(Math.random() * WIN_MSGS.length)])
-        handleGameEnd(g.score)
+
+        // Trigger level transition
+        const nextLevel = g.level + 1
+        setShowLevelTransition(true)
+        setLevel(nextLevel)
+
+        setTimeout(() => {
+          setShowLevelTransition(false)
+          const container = containerRef.current
+          if (!container) return
+          const newG = initGame(
+            { width: container.getBoundingClientRect().width, height: container.getBoundingClientRect().height },
+            nextLevel,
+            g.score
+          )
+          gameRef.current = newG
+          setGameState('idle')
+        }, 2000)
       }
     }
 
@@ -307,7 +404,6 @@ export default function BrickBreaker({ user, onClose }) {
     if (g.state === 'idle') {
       g.state = 'playing'
       setGameState('playing')
-      // Random angle between 30° and 150°
       const angle = (0.3 + Math.random() * 0.4) * Math.PI
       g.ball.dx = Math.cos(angle) * BALL_SPEED
       g.ball.dy = -Math.abs(Math.sin(angle) * BALL_SPEED)
@@ -363,16 +459,17 @@ export default function BrickBreaker({ user, onClose }) {
   function handleRestart() {
     const container = containerRef.current
     if (!container) return
-    const g = initGame({ width: container.getBoundingClientRect().width, height: container.getBoundingClientRect().height })
+    const g = initGame({ width: container.getBoundingClientRect().width, height: container.getBoundingClientRect().height }, 1, 0)
     gameRef.current = g
     setGameState('idle')
     setScore(0)
+    setLevel(1)
     setLeaderboard([])
   }
 
   // ─── Leaderboard overlay ────────────────────────────────────────────
   function renderLeaderboard() {
-    const isGameEnd = gameState === 'gameOver' || gameState === 'won'
+    const isGameEnd = gameState === 'gameOver'
     if (!isGameEnd) return null
 
     const medals = ['🥇', '🥈', '🥉']
@@ -391,20 +488,23 @@ export default function BrickBreaker({ user, onClose }) {
         {/* End message */}
         <p style={{ margin: '0 0 4px', fontSize: 32 }}>🎬</p>
         <h3 style={{
-          margin: '0 0 4px', fontSize: 20, fontWeight: 900,
+          margin: '0 0 4px', fontSize: 18, fontWeight: 900,
           fontFamily: "'Archivo Black', sans-serif", color: '#fff',
           textTransform: 'uppercase', letterSpacing: '0.02em',
         }}>
           {endMsg}
         </h3>
-        <p style={{ margin: '0 0 20px', fontSize: 28, fontWeight: 900, color: '#ff3b3b', fontFamily: "'Archivo Black', sans-serif" }}>
+        <p style={{ margin: '0 0 4px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+          Nivel {level} alcanzado
+        </p>
+        <p style={{ margin: '0 0 16px', fontSize: 28, fontWeight: 900, color: '#ff3b3b', fontFamily: "'Archivo Black', sans-serif" }}>
           {score} pts
         </p>
 
         {/* Leaderboard */}
         <div style={{ width: '100%', maxWidth: 300 }}>
           <p style={{
-            margin: '0 0 12px', fontSize: 11, fontWeight: 700,
+            margin: '0 0 10px', fontSize: 11, fontWeight: 700,
             color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase',
             letterSpacing: '0.12em', textAlign: 'center',
           }}>
@@ -428,32 +528,27 @@ export default function BrickBreaker({ user, onClose }) {
             return (
               <div key={entry.user_id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 12px', borderRadius: 10,
+                padding: '7px 12px', borderRadius: 10,
                 background: isMe ? 'rgba(255,59,59,0.12)' : 'transparent',
                 border: isMe ? '1px solid rgba(255,59,59,0.3)' : '1px solid transparent',
-                marginBottom: 4,
+                marginBottom: 3,
               }}>
-                {/* Rank */}
                 <span style={{ fontSize: 14, width: 24, textAlign: 'center', flexShrink: 0 }}>
                   {i < 3 ? medals[i] : <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>{i + 1}</span>}
                 </span>
-
-                {/* Avatar */}
                 <div style={{
-                  width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                  width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
                   background: 'linear-gradient(135deg,#1a1a1a,#111)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {entry.avatar_url ? (
                     <img src={entry.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>
                       {(entry.nombre_display || '?').charAt(0)}
                     </span>
                   )}
                 </div>
-
-                {/* Name */}
                 <span style={{
                   flex: 1, fontSize: 13, fontWeight: isMe ? 700 : 500,
                   color: isMe ? '#fff' : 'rgba(255,255,255,0.6)',
@@ -461,8 +556,6 @@ export default function BrickBreaker({ user, onClose }) {
                 }}>
                   {isMe ? 'Tu' : (entry.nombre_display || 'Cinero')}
                 </span>
-
-                {/* Score */}
                 <span style={{
                   fontSize: 13, fontWeight: 800, flexShrink: 0,
                   color: isMe ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
@@ -475,7 +568,7 @@ export default function BrickBreaker({ user, onClose }) {
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 20, width: '100%', maxWidth: 300 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 16, width: '100%', maxWidth: 300 }}>
           <button onClick={handleRestart} style={{
             flex: 1, padding: '12px 16px', borderRadius: 12,
             background: '#ff3b3b', border: 'none',
@@ -500,14 +593,17 @@ export default function BrickBreaker({ user, onClose }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 0, minHeight: 0 }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', flex: 1, gap: 0, minHeight: 0,
+      maxHeight: 'calc(100vh - 56px - 56px - 40px)',
+    }}>
       {/* Game header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '8px 4px', flexShrink: 0,
       }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
-          SCORE: {score}
+          NIVEL {level} · {score} pts
         </span>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)',
@@ -536,6 +632,29 @@ export default function BrickBreaker({ user, onClose }) {
           style={{ display: 'block', width: '100%', height: '100%', touchAction: 'none' }}
         />
         {renderLeaderboard()}
+
+        {/* Level transition overlay */}
+        {showLevelTransition && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 25,
+            background: 'rgba(0,0,0,0.88)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.3s ease',
+            borderRadius: 14,
+          }}>
+            <p style={{
+              fontSize: 48, fontWeight: 900,
+              fontFamily: "'Archivo Black', sans-serif",
+              color: '#ff3b3b', textTransform: 'uppercase',
+              letterSpacing: '0.05em', margin: 0,
+            }}>
+              NIVEL {level}
+            </p>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
+              {LEVEL_UP_MSGS[Math.floor(Math.random() * LEVEL_UP_MSGS.length)]}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

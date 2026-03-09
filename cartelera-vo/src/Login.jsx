@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 
 export default function Login({ onDemoMode }) {
+  const [isReturningUser] = useState(() => !!localStorage.getItem('vose_has_account'))
   const [inviteCode, setInviteCode] = useState('')
   const [validating, setValidating] = useState(false)
-  const [codeValidated, setCodeValidated] = useState(false)
+  const [codeValidated, setCodeValidated] = useState(() => !!localStorage.getItem('vose_has_account'))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [shaking, setShaking] = useState(false)
@@ -176,47 +177,62 @@ export default function Login({ onDemoMode }) {
           animation: 'fadeInUp 0.7s ease both 0.45s',
         }}>
 
+          {/* Returning user message */}
+          {isReturningUser && (
+            <p style={{
+              fontSize: 14, fontWeight: 500,
+              color: 'rgba(255,255,255,0.5)',
+              textAlign: 'center', marginBottom: 8,
+              fontFamily: "'DM Sans', sans-serif",
+              animation: 'slideDown 0.3s ease',
+            }}>
+              Bienvenido de vuelta
+            </p>
+          )}
+
           {/* Validated badge */}
-          {codeValidated && (
+          {codeValidated && !isReturningUser && (
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               gap: 6, marginBottom: 12,
               animation: 'slideDown 0.3s ease',
             }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17l-5-5" stroke="#34c759" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M20 6L9 17l-5-5" stroke="#ff3b3b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#34c759' }}>Código válido</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#ff3b3b' }}>Código válido</span>
             </div>
           )}
 
-          {/* Invite code input */}
-          <input
-            value={inviteCode}
-            onChange={e => { setInviteCode(e.target.value.toUpperCase()); setError(null) }}
-            onKeyDown={e => e.key === 'Enter' && handleGoogleLogin()}
-            placeholder="Código de invitación"
-            autoCapitalize="characters"
-            autoComplete="off"
-            readOnly={codeValidated}
-            style={{
-              width: '100%', padding: '12px 0', borderRadius: 0,
-              border: 'none',
-              borderBottom: `1px solid ${codeValidated ? 'rgba(52,199,89,0.4)' : 'rgba(255,255,255,0.12)'}`,
-              background: 'transparent',
-              color: '#fff', fontFamily: "'DM Sans', sans-serif",
-              fontSize: 16, fontWeight: 300, letterSpacing: '0.15em',
-              textAlign: 'center', boxSizing: 'border-box',
-              outline: 'none', transition: 'all 0.3s',
-              opacity: codeValidated ? 0.45 : 1,
-              animation: shaking ? 'shake 0.4s ease' : 'none',
-            }}
-          />
+          {/* Invite code input — hidden for returning users */}
+          {!isReturningUser && (
+            <input
+              value={inviteCode}
+              onChange={e => { setInviteCode(e.target.value.toUpperCase()); setError(null) }}
+              onKeyDown={e => e.key === 'Enter' && handleGoogleLogin()}
+              placeholder="Código de invitación"
+              autoCapitalize="characters"
+              autoComplete="off"
+              readOnly={codeValidated}
+              style={{
+                width: '100%', padding: '12px 0', borderRadius: 0,
+                border: 'none',
+                borderBottom: `1px solid ${codeValidated ? 'rgba(255,59,59,0.4)' : 'rgba(255,255,255,0.12)'}`,
+                background: 'transparent',
+                color: '#fff', fontFamily: "'DM Sans', sans-serif",
+                fontSize: 16, fontWeight: 300, letterSpacing: '0.15em',
+                textAlign: 'center', boxSizing: 'border-box',
+                outline: 'none', transition: 'all 0.3s',
+                opacity: codeValidated ? 0.45 : 1,
+                animation: shaking ? 'shake 0.4s ease' : 'none',
+              }}
+            />
+          )}
 
           {/* Google Login Button — always visible, enabled only with valid code */}
           <button
             onClick={handleGoogleLogin}
-            disabled={validating || loading || !inviteCode.trim()}
+            disabled={validating || loading || (!isReturningUser && !codeValidated && !inviteCode.trim())}
             style={{
               width: '100%', padding: '14px 16px', borderRadius: 14,
               border: 'none', marginTop: 16,
@@ -267,7 +283,7 @@ export default function Login({ onDemoMode }) {
           </button>
 
           {/* Change code link */}
-          {codeValidated && (
+          {codeValidated && !isReturningUser && (
             <button
               onClick={resetCode}
               style={{

@@ -1,49 +1,32 @@
 import { useState, useEffect } from 'react'
 import { getAllSessionsForMovie, sKey } from '../../utils.js'
+import RouletteWheel from './RouletteWheel.jsx'
 
-// Generate .ics calendar event and trigger download
+// Open Google Calendar with pre-filled event
 function addToCalendar(movieTitle, session) {
   if (!session) return
   const [year, month, day] = (session.date || "").split("-").map(Number)
   const [hours, minutes] = (session.time || "").split(":").map(Number)
   if (!year || !month || !day) return
-
-  const start = new Date(year, month - 1, day, hours, minutes)
+  const start = new Date(year, month - 1, day, hours || 0, minutes || 0)
   const end = new Date(start.getTime() + 150 * 60 * 1000)
-
   const pad = (n) => String(n).padStart(2, "0")
-  const toICS = (d) => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
-
-  const ics = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//CarteleraVO//ES",
-    "BEGIN:VEVENT",
-    `DTSTART:${toICS(start)}`,
-    `DTEND:${toICS(end)}`,
-    `SUMMARY:🎬 ${movieTitle}`,
-    `LOCATION:${session.cinema || ""}`,
-    `DESCRIPTION:Plan de cine — ${movieTitle}\\n${session.cinema || ""}`,
-    `STATUS:CONFIRMED`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n")
-
-  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = `${movieTitle.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, "").trim().replace(/\s+/g, "-")}.ics`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const fmt = (d) => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `🎬 ${movieTitle}`,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    location: session.cinema || '',
+    details: `Plan de cine VOSE — ${movieTitle}\n${session.cinema || ''}`,
+  })
+  window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
-export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose }) {
+export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends }) {
   const [allSessions, setAllSessions] = useState([])
   const [myAvail, setMyAvail] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
+  const [showRoulette, setShowRoulette] = useState(false)
 
   // Load all sessions when entering pick_avail
   useEffect(() => {
@@ -128,9 +111,9 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
                         {slots.map(s => {
                           const sel = isMarked(s)
                           return (
-                            <button key={sKey(s)} onClick={() => toggleAvail(s)} style={{padding:"9px 16px",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.18s",background:sel?"rgba(52,199,89,0.15)":"rgba(255,255,255,0.06)",color:sel?"#34c759":"rgba(255,255,255,0.5)",border:sel?"1.5px solid rgba(52,199,89,0.4)":"1px solid rgba(255,255,255,0.09)"}}>
+                            <button key={sKey(s)} onClick={() => toggleAvail(s)} style={{padding:"9px 16px",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.18s",background:sel?"rgba(255,59,59,0.15)":"rgba(255,255,255,0.06)",color:sel?"#ff3b3b":"rgba(255,255,255,0.5)",border:sel?"1.5px solid rgba(255,59,59,0.4)":"1px solid rgba(255,255,255,0.09)"}}>
                               {sel && "✓ "}{s.time}
-                              <span style={{display:"block",fontSize:10,marginTop:1,color:sel?"rgba(52,199,89,0.6)":"rgba(255,255,255,0.22)"}}>{s.cinema.split(" ")[0]}</span>
+                              <span style={{display:"block",fontSize:10,marginTop:1,color:sel?"rgba(255,59,59,0.6)":"rgba(255,255,255,0.22)"}}>{s.cinema.split(" ")[0]}</span>
                             </button>
                           )
                         })}
@@ -176,20 +159,39 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
         )}
 
         {/* CONFIRMED */}
-        {myState === "confirmed" && chosen && (
-          <div style={{background:"rgba(52,199,89,0.07)",border:"1px solid rgba(52,199,89,0.2)",borderRadius:16,padding:18,textAlign:"center"}}>
-            <p style={{fontSize:11,fontWeight:600,color:"#34c759",letterSpacing:"0.08em",textTransform:"uppercase",margin:"0 0 10px"}}>Plan confirmado ✓</p>
+        {myState === "confirmed" && chosen && !showRoulette && (
+          <div style={{background:"rgba(255,59,59,0.07)",border:"1px solid rgba(255,59,59,0.2)",borderRadius:16,padding:18,textAlign:"center"}}>
+            <p style={{fontSize:11,fontWeight:600,color:"#ff3b3b",letterSpacing:"0.08em",textTransform:"uppercase",margin:"0 0 10px"}}>Plan confirmado ✓</p>
             <p style={{fontSize:26,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{chosen.day || chosen.date} · {chosen.time}</p>
             <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:"0 0 16px"}}>📍 {chosen.cinema}</p>
-            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <button onClick={() => addToCalendar(plan.movie_title, chosen)} style={{padding:"13px 24px",borderRadius:100,background:"#34c759",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+            <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={() => addToCalendar(plan.movie_title, chosen)} style={{padding:"13px 24px",borderRadius:100,background:"#ff3b3b",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#000" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#000" strokeWidth="2" strokeLinecap="round"/></svg>
                 Añadir al calendario
               </button>
-              <button onClick={onClose} style={{padding:"13px 24px",borderRadius:100,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cerrar</button>
+              <button onClick={() => setShowRoulette(true)} style={{padding:"13px 24px",borderRadius:100,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.6)",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                🎰 ¿Quién paga?
+              </button>
             </div>
           </div>
         )}
+
+        {/* ROULETTE */}
+        {myState === "confirmed" && showRoulette && (() => {
+          const participants = []
+          // Add current user
+          if (user) {
+            participants.push({ name: user?.user_metadata?.full_name || 'Tú', avatar_url: user?.user_metadata?.avatar_url })
+          }
+          // Add plan partner
+          const partner = plan.partner
+          if (partner) {
+            participants.push({ name: partner.nombre_display || partner.nombre || partnerName, avatar_url: partner.avatar_url })
+          } else {
+            participants.push({ name: partnerName, avatar_url: null })
+          }
+          return <RouletteWheel participants={participants} onClose={() => setShowRoulette(false)} />
+        })()}
 
         {/* NO_MATCH */}
         {myState === "no_match" && (

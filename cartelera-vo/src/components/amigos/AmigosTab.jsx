@@ -2,46 +2,24 @@ import { useState, useEffect } from 'react'
 import PlanSheet from './PlanSheet.jsx'
 import FriendDetailSheet from './FriendDetailSheet.jsx'
 
-// Generate .ics calendar event and trigger download
+// Open Google Calendar with pre-filled event
 function addToCalendar(movieTitle, session) {
   if (!session) return
-  // Parse date (YYYY-MM-DD) + time (HH:MM)
   const [year, month, day] = (session.date || "").split("-").map(Number)
   const [hours, minutes] = (session.time || "").split(":").map(Number)
-
   if (!year || !month || !day) return
-
-  // Build DTSTART/DTEND — assume ~2.5h movie
-  const start = new Date(year, month - 1, day, hours, minutes)
-  const end = new Date(start.getTime() + 150 * 60 * 1000) // +2.5 hours
-
+  const start = new Date(year, month - 1, day, hours || 0, minutes || 0)
+  const end = new Date(start.getTime() + 150 * 60 * 1000)
   const pad = (n) => String(n).padStart(2, "0")
-  const toICS = (d) => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
-
-  const ics = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//CarteleraVO//ES",
-    "BEGIN:VEVENT",
-    `DTSTART:${toICS(start)}`,
-    `DTEND:${toICS(end)}`,
-    `SUMMARY:🎬 ${movieTitle}`,
-    `LOCATION:${session.cinema || ""}`,
-    `DESCRIPTION:Plan de cine — ${movieTitle}\\n${session.cinema || ""}`,
-    `STATUS:CONFIRMED`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n")
-
-  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = `${movieTitle.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, "").trim().replace(/\s+/g, "-")}.ics`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const fmt = (d) => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `🎬 ${movieTitle}`,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    location: session.cinema || '',
+    details: `Plan de cine VOSE — ${movieTitle}\n${session.cinema || ''}`,
+  })
+  window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
 export default function AmigosTab({
@@ -102,6 +80,8 @@ export default function AmigosTab({
             plan={plan}
             myState={getMyState(plan)}
             partnerName={partnerName}
+            user={user}
+            friends={friends}
             onRespondYes={() => onRespondYes(plan.id)}
             onRespondNo={() => onRespondNo(plan.id)}
             onSendAvailability={(sessions) => onSendAvailability(plan.id, sessions)}
@@ -126,7 +106,7 @@ export default function AmigosTab({
     waiting_them: "rgba(255,255,255,0.4)",
     pick_avail: "#ffd60a",
     waiting_pick: "rgba(255,255,255,0.4)",
-    pick_theirs: "#34c759",
+    pick_theirs: "#ff3b3b",
   }
 
   return (
@@ -148,7 +128,7 @@ export default function AmigosTab({
 
       {/* Header */}
       <div style={{padding:"18px 20px 14px",flexShrink:0}}>
-        <h1 style={{margin:0,fontSize:22,fontWeight:800,color:"#fff",fontFamily:"'DM Sans',sans-serif",letterSpacing:"-0.01em"}}>Amigos & Planes</h1>
+        <h1 style={{margin:0,fontSize:22,fontWeight:400,color:"#fff",fontFamily:"'Archivo Black',sans-serif",letterSpacing:"0.02em",textTransform:"uppercase"}}>Amigos & Planes</h1>
       </div>
 
       {/* Scrollable content */}
@@ -160,7 +140,7 @@ export default function AmigosTab({
             <div style={{width:72,height:72,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",margin:"0 auto 16px",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 7a4 4 0 110 8 4 4 0 010-8z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <h2 style={{margin:"0 0 8px",fontSize:22,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",letterSpacing:"0.01em"}}>Agrega amigos</h2>
+            <h2 style={{margin:"0 0 8px",fontSize:22,fontWeight:300,fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.12em"}}>Agrega amigos</h2>
             <p style={{margin:"0 0 24px",fontSize:14,color:"rgba(255,255,255,0.4)",lineHeight:1.6,maxWidth:260,marginLeft:"auto",marginRight:"auto"}}>
               Descubre que pelis quieren ver y organiza planes juntos
             </p>
@@ -223,7 +203,7 @@ export default function AmigosTab({
                     <div style={{flex:1,minWidth:0}}>
                       <p style={{margin:0,fontSize:13,fontWeight:600,color:"#fff"}}>{req.nombre_display || req.nombre}</p>
                     </div>
-                    <button onClick={() => onAcceptFriend(req.friendshipId)} style={{padding:"6px 14px",borderRadius:8,background:"rgba(52,199,89,0.12)",border:"1px solid rgba(52,199,89,0.25)",color:"#34c759",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Aceptar</button>
+                    <button onClick={() => onAcceptFriend(req.friendshipId)} style={{padding:"6px 14px",borderRadius:8,background:"rgba(255,59,59,0.12)",border:"1px solid rgba(255,59,59,0.25)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Aceptar</button>
                     <button onClick={() => onRemoveFriend(req.friendshipId)} style={{padding:"6px 8px",borderRadius:8,background:"rgba(255,69,58,0.08)",border:"1px solid rgba(255,69,58,0.15)",color:"#ff453a",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                   </div>
                 ))}
@@ -255,14 +235,14 @@ export default function AmigosTab({
             {/* SECTION: Planes (confirmed + joinable) */}
             {(confirmedPlans.length > 0 || openPlans.length > 0) && (
               <div style={{padding:"0 20px",marginBottom:20}}>
-                <p style={{margin:"0 0 10px",fontSize:11,fontWeight:700,color:"rgba(52,199,89,0.6)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Planes</p>
+                <p style={{margin:"0 0 10px",fontSize:11,fontWeight:700,color:"rgba(255,59,59,0.6)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Planes</p>
 
                 {confirmedPlans.map(plan => {
                   const poster = getPoster(plan.movie_title)
                   const isRating = ratingPlan === plan.id
                   const alreadyMarked = markedWatched.has(plan.id)
                   return (
-                    <div key={plan.id} style={{background:"rgba(52,199,89,0.05)",border:"1px solid rgba(52,199,89,0.18)",borderRadius:14,padding:12,marginBottom:10,transition:"all 0.2s"}}>
+                    <div key={plan.id} style={{background:"rgba(255,59,59,0.05)",border:"1px solid rgba(255,59,59,0.18)",borderRadius:14,padding:12,marginBottom:10,transition:"all 0.2s"}}>
                       <div style={{display:"flex",gap:14,alignItems:"center",cursor:"pointer"}} onClick={() => addToCalendar(plan.movie_title, plan.chosen_session)}>
                         {/* Poster thumbnail */}
                         <div style={{width:56,height:84,borderRadius:8,overflow:"hidden",flexShrink:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
@@ -284,14 +264,14 @@ export default function AmigosTab({
                               const name = pid === user?.id ? "Tu" : (f?.nombre_display || f?.nombre || pp?.nombre_display || pp?.nombre || "Amigo")
                               return <span key={pid} style={{fontSize:10,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:6}}>{name}</span>
                             })}
-                            <span style={{fontSize:10,fontWeight:700,color:"#34c759",marginLeft:4}}>✓ Confirmado</span>
+                            <span style={{fontSize:10,fontWeight:700,color:"#ff3b3b",marginLeft:4}}>✓ Confirmado</span>
                           </div>
                         </div>
                       </div>
                       {/* Action buttons row */}
                       <div style={{display:"flex",gap:8,marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-                        <button onClick={() => addToCalendar(plan.movie_title, plan.chosen_session)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:"rgba(52,199,89,0.08)",border:"1px solid rgba(52,199,89,0.18)",color:"#34c759",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#34c759" strokeWidth="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#34c759" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        <button onClick={() => addToCalendar(plan.movie_title, plan.chosen_session)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:"rgba(255,59,59,0.08)",border:"1px solid rgba(255,59,59,0.18)",color:"#ff3b3b",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#ff3b3b" strokeWidth="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#ff3b3b" strokeWidth="1.5" strokeLinecap="round"/></svg>
                           Calendario
                         </button>
                         {alreadyMarked ? (
@@ -354,7 +334,7 @@ export default function AmigosTab({
                             <span key={i} style={{fontSize:10,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:6}}>{p.nombre_display || p.nombre}</span>
                           ))}
                         </div>
-                        <button onClick={() => onJoinPlan(plan.id)} style={{padding:"7px 18px",borderRadius:8,background:"rgba(52,199,89,0.1)",border:"1px solid rgba(52,199,89,0.25)",color:"#34c759",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        <button onClick={() => onJoinPlan(plan.id)} style={{padding:"7px 18px",borderRadius:8,background:"rgba(255,59,59,0.1)",border:"1px solid rgba(255,59,59,0.25)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           Apuntarme
                         </button>
                       </div>
@@ -431,7 +411,7 @@ export default function AmigosTab({
                           </div>
                         </div>
                         {/* VOY button */}
-                        <button onClick={() => onVoyInline(movieTitle)} style={{width:"100%",padding:"8px 0",borderRadius:8,background:"rgba(52,199,89,0.1)",border:"1px solid rgba(52,199,89,0.2)",color:"#34c759",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        <button onClick={() => onVoyInline(movieTitle)} style={{width:"100%",padding:"8px 0",borderRadius:8,background:"rgba(255,59,59,0.1)",border:"1px solid rgba(255,59,59,0.2)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           VOY
                         </button>
                       </div>
@@ -508,7 +488,7 @@ export default function AmigosTab({
                       )}
                     </div>
                     {alreadySent ? (
-                      <span style={{fontSize:11,fontWeight:700,color:"#34c759",padding:"6px 12px",background:"rgba(52,199,89,0.1)",borderRadius:10}}>Enviada ✓</span>
+                      <span style={{fontSize:11,fontWeight:700,color:"#ff3b3b",padding:"6px 12px",background:"rgba(255,59,59,0.1)",borderRadius:10}}>Enviada ✓</span>
                     ) : (
                       <button
                         onClick={async () => {
@@ -520,7 +500,7 @@ export default function AmigosTab({
                           }
                         }}
                         disabled={isSending}
-                        style={{padding:"6px 14px",borderRadius:10,background:"rgba(52,199,89,0.12)",border:"1px solid rgba(52,199,89,0.25)",color:"#34c759",fontSize:12,fontWeight:700,cursor:isSending?"not-allowed":"pointer",fontFamily:"inherit",opacity:isSending?0.5:1}}
+                        style={{padding:"6px 14px",borderRadius:10,background:"rgba(255,59,59,0.12)",border:"1px solid rgba(255,59,59,0.25)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:isSending?"not-allowed":"pointer",fontFamily:"inherit",opacity:isSending?0.5:1}}
                       >
                         {isSending ? "..." : "Agregar"}
                       </button>

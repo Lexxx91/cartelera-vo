@@ -32,6 +32,7 @@ export default function useProfile(user) {
 
       if (data) {
         setProfile(data)
+        localStorage.setItem('vose_has_account', 'true')
       } else {
         // Create profile on first login
         const newProfile = {

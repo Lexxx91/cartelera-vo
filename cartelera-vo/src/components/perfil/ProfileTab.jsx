@@ -57,7 +57,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)",overflow:"hidden"}}>
       {/* Header */}
       <div style={{padding:"18px 20px 14px",flexShrink:0}}>
-        <h1 style={{margin:0,fontSize:22,fontWeight:800,color:"#fff",fontFamily:"'DM Sans',sans-serif",letterSpacing:"-0.01em"}}>Perfil</h1>
+        <h1 style={{margin:0,fontSize:22,fontWeight:400,color:"#fff",fontFamily:"'Archivo Black',sans-serif",textTransform:"uppercase",letterSpacing:"0.02em"}}>Perfil</h1>
       </div>
 
       {/* Scrollable content */}
@@ -79,7 +79,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
               </div>
             )}
             {/* Camera badge */}
-            <div style={{position:"absolute",bottom:2,right:2,width:28,height:28,borderRadius:"50%",background:"rgba(52,199,89,0.9)",display:"flex",alignItems:"center",justifyContent:"center",border:"2.5px solid #111"}}>
+            <div style={{position:"absolute",bottom:2,right:2,width:28,height:28,borderRadius:"50%",background:"rgba(255,59,59,0.9)",display:"flex",alignItems:"center",justifyContent:"center",border:"2.5px solid #111"}}>
               {avatarLoading ? (
                 <div style={{width:12,height:12,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
               ) : (
@@ -96,11 +96,11 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
             <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center",marginBottom:4}}>
               <input value={displayName} onChange={e => setDisplayName(e.target.value)} autoFocus
                 style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:12,padding:"10px 16px",fontSize:17,fontWeight:700,color:"#fff",fontFamily:"inherit",textAlign:"center",maxWidth:200}} />
-              <button onClick={saveName} style={{background:"rgba(52,199,89,0.15)",border:"1px solid rgba(52,199,89,0.3)",borderRadius:10,padding:"10px 14px",color:"#34c759",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700}}>OK</button>
+              <button onClick={saveName} style={{background:"rgba(255,59,59,0.15)",border:"1px solid rgba(255,59,59,0.3)",borderRadius:10,padding:"10px 14px",color:"#ff3b3b",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700}}>OK</button>
             </div>
           ) : (
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:4}}>
-              <h2 style={{margin:0,fontSize:22,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",letterSpacing:"0.01em"}}>{displayName}</h2>
+              <h2 style={{margin:0,fontSize:22,fontWeight:300,fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.12em"}}>{displayName}</h2>
               <button onClick={() => setEditingName(true)} style={{background:"none",border:"none",cursor:"pointer",padding:4,color:"rgba(255,255,255,0.3)"}}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
@@ -113,7 +113,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
         <div style={{padding:"0 20px",marginBottom:20}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:0,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,overflow:"hidden"}}>
             {[
-              { label: "VOY", value: voyCount, color: "#34c759" },
+              { label: "VOY", value: voyCount, color: "#ff3b3b" },
               { label: "PASO", value: pasoCount, color: "#ff453a" },
               { label: "VISTAS", value: watchedCount, color: "#ff3b3b" },
             ].map((stat, i) => (
@@ -132,7 +132,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
             <div style={{fontSize:30,fontWeight:300,letterSpacing:"0.18em",color:"#fff",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>{inviteCode}</div>
             <p style={{margin:"0 0 16px",fontSize:12,color:"rgba(255,255,255,0.3)",lineHeight:1.5}}>Comparte este codigo para invitar amigos a VOSE</p>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={copyCode} style={{flex:1,padding:13,borderRadius:14,background:copied?"rgba(52,199,89,0.12)":"rgba(255,255,255,0.06)",border:`1px solid ${copied?"rgba(52,199,89,0.25)":"rgba(255,255,255,0.1)"}`,color:copied?"#34c759":"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
+              <button onClick={copyCode} style={{flex:1,padding:13,borderRadius:14,background:copied?"rgba(255,59,59,0.12)":"rgba(255,255,255,0.06)",border:`1px solid ${copied?"rgba(255,59,59,0.25)":"rgba(255,255,255,0.1)"}`,color:copied?"#ff3b3b":"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
                 {copied ? "Copiado ✓" : "Copiar"}
               </button>
               <button onClick={shareCode} style={{flex:1,padding:13,borderRadius:14,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>

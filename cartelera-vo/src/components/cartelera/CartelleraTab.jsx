@@ -6,9 +6,10 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
   const [swiped, setSwiped] = useState({})
   const [history, setHistory] = useState([])
   const [showGame, setShowGame] = useState(false)
+  const [showAll, setShowAll] = useState(false)
 
-  // Filter: only movies I haven't voted on
-  const remaining = movies.filter(m => !swiped[m.title] && !myVotes[m.title])
+  // Filter: only movies I haven't voted on (unless showAll after reset)
+  const remaining = movies.filter(m => !swiped[m.title] && (showAll || !myVotes[m.title]))
 
   function handleSwipe(direction) {
     if (remaining.length === 0) return
@@ -33,6 +34,7 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
     setSwiped({})
     setHistory([])
     setShowGame(false)
+    setShowAll(true)
   }
 
   const stackCards = remaining.slice(0, 4)
@@ -119,14 +121,14 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
 
         {/* Brick Breaker game */}
         {!loading && !error && remaining.length === 0 && movies.length > 0 && showGame && (
-          <div style={{flex:1,display:"flex",flexDirection:"column",padding:"0 4px",minHeight:0,animation:"fadeIn 0.3s ease"}}>
+          <div style={{flex:1,display:"flex",flexDirection:"column",padding:"0 4px",minHeight:0,maxHeight:"calc(100vh - 56px - 56px - 20px)",animation:"fadeIn 0.3s ease"}}>
             <BrickBreaker user={user} onClose={() => setShowGame(false)} />
           </div>
         )}
 
         {!loading && !error && remaining.length > 0 && (
           <>
-            <div style={{position:"relative",height:480,overflow:"visible"}}>
+            <div style={{position:"relative",height:"min(480px, 65vh)",overflow:"visible"}}>
               {stackCards.map((movie, si) => (
                 <SwipeCard
                   key={movie.title}
@@ -147,8 +149,8 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
               <button onClick={handleUndo} disabled={history.length===0} style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",cursor:history.length>0?"pointer":"not-allowed",fontSize:16,opacity:history.length>0?1:0.3,transition:"all 0.2s"}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 14L4 9l5-5M4 9h11a6 6 0 010 12h-1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
-              <button onClick={()=>handleSwipe('voy')} style={{width:64,height:64,borderRadius:"50%",background:"rgba(52,199,89,0.12)",border:"2px solid rgba(52,199,89,0.4)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,transition:"all 0.2s"}}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#34c759" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <button onClick={()=>handleSwipe('voy')} style={{width:64,height:64,borderRadius:"50%",background:"rgba(255,59,59,0.12)",border:"2px solid rgba(255,59,59,0.4)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,transition:"all 0.2s"}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#ff3b3b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>
           </>
