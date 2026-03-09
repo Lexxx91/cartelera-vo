@@ -251,19 +251,69 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
 
         {/* === STATE-SPECIFIC CONTENT === */}
 
-        {/* PROPOSED */}
+        {/* PROPOSED — show initiator's availability for partner to pick */}
         {myState === "proposed" && proposed && (
           <>
-            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 14px"}}>Mejor opcion disponible</p>
-            <div style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:18,padding:20,marginBottom:20,textAlign:"center"}}>
-              <p style={{fontSize:28,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{proposed.day || proposed.date}</p>
-              <p style={{fontSize:40,fontWeight:800,color:"#fff",letterSpacing:"-2px",margin:"0 0 8px",lineHeight:1}}>{proposed.time}</p>
-              <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:0}}>📍 {proposed.cinema}</p>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={onRespondNo} style={{flex:1,padding:16,borderRadius:14,background:"rgba(255,255,255,0.06)",border:"1.5px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.55)",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>No puedo</button>
-              <button onClick={onRespondYes} style={{flex:2,padding:16,borderRadius:14,background:"#fff",color:"#000",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none"}}>Me cuadra y me sabe ✓</button>
-            </div>
+            {theirAvail && theirAvail.length > 1 ? (
+              /* NEW FLOW: Other person sent multiple sessions → pick one */
+              <>
+                <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 6px"}}>
+                  {partnerName.split(" ")[0]} puede en
+                </p>
+                <p style={{fontSize:12,color:"rgba(255,255,255,0.35)",margin:"0 0 16px",lineHeight:1.5}}>
+                  Toca la que mejor te venga. El plan se confirma al instante.
+                </p>
+                {(() => {
+                  const byDay = {}
+                  theirAvail.forEach(s => { if (!byDay[s.day || s.date]) byDay[s.day || s.date] = []; byDay[s.day || s.date].push(s) })
+                  return Object.entries(byDay).map(([day, slots]) => (
+                    <div key={day} style={{marginBottom:14}}>
+                      <p style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.6)",margin:"0 0 8px"}}>{day}</p>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {slots.map(s => (
+                          <button key={sKey(s)} onClick={() => onPickSession(s)} style={{
+                            width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                            padding:"14px 18px",borderRadius:14,
+                            background:"rgba(255,255,255,0.05)",
+                            border:"1px solid rgba(255,255,255,0.09)",
+                            textAlign:"left",cursor:"pointer",fontFamily:"inherit",
+                            transition:"all 0.15s",
+                          }}>
+                            <div>
+                              <p style={{margin:"0 0 2px",fontSize:17,fontWeight:700,color:"#fff"}}>{s.time}</p>
+                              <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.4)"}}>📍 {s.cinema}</p>
+                            </div>
+                            <span style={{fontSize:20,color:"rgba(255,255,255,0.25)"}}>›</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                })()}
+                <button onClick={onRejectAll} style={{
+                  width:"100%",marginTop:4,padding:13,borderRadius:13,
+                  background:"transparent",border:"1px solid rgba(255,69,58,0.2)",
+                  color:"rgba(255,69,58,0.55)",fontSize:13,fontWeight:600,
+                  cursor:"pointer",fontFamily:"inherit",
+                }}>
+                  Ninguna me viene bien
+                </button>
+              </>
+            ) : (
+              /* LEGACY/SINGLE: Just one proposed session → yes/no buttons */
+              <>
+                <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 14px"}}>Mejor opcion disponible</p>
+                <div style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:18,padding:20,marginBottom:20,textAlign:"center"}}>
+                  <p style={{fontSize:28,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{proposed.day || proposed.date}</p>
+                  <p style={{fontSize:40,fontWeight:800,color:"#fff",letterSpacing:"-2px",margin:"0 0 8px",lineHeight:1}}>{proposed.time}</p>
+                  <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:0}}>📍 {proposed.cinema}</p>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={onRespondNo} style={{flex:1,padding:16,borderRadius:14,background:"rgba(255,255,255,0.06)",border:"1.5px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.55)",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>No puedo</button>
+                  <button onClick={onRespondYes} style={{flex:2,padding:16,borderRadius:14,background:"#fff",color:"#000",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none"}}>Me cuadra y me sabe ✓</button>
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -325,21 +375,48 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
           </div>
         )}
 
-        {/* PICK_THEIRS */}
+        {/* PICK_THEIRS — partner sent availability, I pick one */}
         {myState === "pick_theirs" && (
           <>
-            <p style={{fontSize:14,fontWeight:700,color:"#fff",margin:"0 0 4px"}}>{partnerName.split(" ")[0]} puede en estas fechas</p>
-            <p style={{fontSize:12,color:"rgba(255,255,255,0.35)",margin:"0 0 18px",lineHeight:1.6}}>Elige la que mejor te venga. El plan se confirma al instante.</p>
-            {theirAvail.map(s => (
-              <button key={sKey(s)} onClick={() => onPickSession(s)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:16,borderRadius:14,marginBottom:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
-                <div>
-                  <p style={{margin:"0 0 2px",fontSize:16,fontWeight:700,color:"#fff"}}>{s.day || s.date} · {s.time}</p>
-                  <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.4)"}}>📍 {s.cinema}</p>
+            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 6px"}}>
+              {partnerName.split(" ")[0]} puede en
+            </p>
+            <p style={{fontSize:12,color:"rgba(255,255,255,0.35)",margin:"0 0 16px",lineHeight:1.5}}>
+              Toca la que mejor te venga. El plan se confirma al instante.
+            </p>
+            {(() => {
+              const byDay = {}
+              theirAvail.forEach(s => { if (!byDay[s.day || s.date]) byDay[s.day || s.date] = []; byDay[s.day || s.date].push(s) })
+              return Object.entries(byDay).map(([day, slots]) => (
+                <div key={day} style={{marginBottom:14}}>
+                  <p style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.6)",margin:"0 0 8px"}}>{day}</p>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {slots.map(s => (
+                      <button key={sKey(s)} onClick={() => onPickSession(s)} style={{
+                        width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                        padding:"14px 18px",borderRadius:14,
+                        background:"rgba(255,255,255,0.05)",
+                        border:"1px solid rgba(255,255,255,0.09)",
+                        textAlign:"left",cursor:"pointer",fontFamily:"inherit",
+                        transition:"all 0.15s",
+                      }}>
+                        <div>
+                          <p style={{margin:"0 0 2px",fontSize:17,fontWeight:700,color:"#fff"}}>{s.time}</p>
+                          <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.4)"}}>📍 {s.cinema}</p>
+                        </div>
+                        <span style={{fontSize:20,color:"rgba(255,255,255,0.25)"}}>›</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <span style={{fontSize:20,color:"rgba(255,255,255,0.25)"}}>›</span>
-              </button>
-            ))}
-            <button onClick={onRejectAll} style={{width:"100%",marginTop:4,padding:13,borderRadius:13,background:"transparent",border:"1px solid rgba(255,69,58,0.2)",color:"rgba(255,69,58,0.55)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              ))
+            })()}
+            <button onClick={onRejectAll} style={{
+              width:"100%",marginTop:4,padding:13,borderRadius:13,
+              background:"transparent",border:"1px solid rgba(255,69,58,0.2)",
+              color:"rgba(255,69,58,0.55)",fontSize:13,fontWeight:600,
+              cursor:"pointer",fontFamily:"inherit",
+            }}>
               Ninguna me viene bien
             </button>
           </>

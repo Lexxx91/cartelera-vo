@@ -167,18 +167,16 @@ export default function useDemo(movies) {
   }, [demoPlans])
 
   // Create a demo plan (local state, no Supabase)
-  // If session is provided (from MatchOverlay), use it directly
-  async function createDemoPlan(movieTitle, userId, session) {
-    let proposed = session
-    if (!proposed) {
-      const sessions = await getAllSessionsForMovie(movieTitle)
-      proposed = findNearestSession(sessions)
+  // sessions is an array of selected sessions from MatchPopup
+  async function createDemoPlan(movieTitle, userId, sessions) {
+    // Normalize: accept single session (legacy) or array
+    let sessionList = Array.isArray(sessions) ? sessions : sessions ? [sessions] : null
+    if (!sessionList || sessionList.length === 0) {
+      const fetched = await getAllSessionsForMovie(movieTitle)
+      const nearest = findNearestSession(fetched)
+      if (!nearest) return null
+      sessionList = [nearest]
     }
-
-    if (!proposed) return null
-
-    // If session was provided (from MatchPopup), user already confirmed
-    const alreadyConfirmed = !!session
 
     const plan = {
       id: `demo-plan-${planIdCounter.current++}`,
@@ -186,10 +184,10 @@ export default function useDemo(movies) {
       state: 'proposed',
       initiator_id: userId,
       partner_id: DEMO_FRIEND.id,
-      proposed_session: proposed,
-      initiator_response: alreadyConfirmed ? 'yes' : null,
+      proposed_session: sessionList[0], // best/nearest for display
+      initiator_response: 'yes', // initiator confirmed availability
       partner_response: null,
-      initiator_availability: [],
+      initiator_availability: sessionList, // ALL selected sessions
       partner_availability: [],
       chosen_session: null,
       participants: [userId, DEMO_FRIEND.id],
@@ -204,43 +202,52 @@ export default function useDemo(movies) {
 
     setDemoPlans(prev => [...prev, plan])
 
-    // If user already confirmed, simulate Carlos responding YES after 2-3s
-    if (alreadyConfirmed) {
-      setTimeout(() => {
-        setDemoPlans(prev => prev.map(p => {
-          if (p.id !== plan.id) return p
-          return {
-            ...p,
-            partner_response: 'yes',
-            state: 'confirmed',
-            chosen_session: p.proposed_session,
-            updated_at: new Date().toISOString(),
-          }
-        }))
-      }, 2000 + Math.random() * 1000)
-    }
+    // Simulate Carlos picking a session from the availability after 2-3s
+    setTimeout(() => {
+      setDemoPlans(prev => prev.map(p => {
+        if (p.id !== plan.id) return p
+        // Carlos picks a random session from the list (or first if only 1)
+        const pick = sessionList.length > 1
+          ? sessionList[Math.floor(Math.random() * sessionList.length)]
+          : sessionList[0]
+        return {
+          ...p,
+          partner_response: 'yes',
+          state: 'confirmed',
+          chosen_session: pick,
+          updated_at: new Date().toISOString(),
+        }
+      }))
+    }, 2000 + Math.random() * 1000)
 
     return plan
   }
 
   // Get "my state" for a demo plan
+  // Note: in demo, user is always the initiator (amIInitiator = true)
   function getMyState(plan) {
     if (plan.state === 'confirmed') return 'confirmed'
     if (plan.state === 'no_match') return 'no_match'
 
     const myResponse = plan.initiator_response
     const theirResponse = plan.partner_response
+    const theirAvail = plan.partner_availability
+
+    // NEW FLOW: If the other person has sent availability and I haven't responded → pick from theirs
+    if (!myResponse && theirAvail && theirAvail.length > 0) {
+      return 'pick_theirs'
+    }
 
     if (!myResponse && !theirResponse) return 'proposed'
-    if (!myResponse && theirResponse === 'no') {
-      if (plan.partner_availability && plan.partner_availability.length > 0) return 'pick_theirs'
-      return 'proposed'
-    }
+
+    // I said yes — waiting for them
     if (myResponse === 'yes') {
       if (theirResponse === 'yes') return 'confirmed'
-      if (theirResponse === 'no' && plan.partner_availability?.length > 0) return 'pick_theirs'
+      if (theirAvail && theirAvail.length > 0) return 'pick_theirs'
       return 'waiting_them'
     }
+
+    // I said no (legacy fallback)
     if (myResponse === 'no') {
       if (!plan.initiator_availability || plan.initiator_availability.length === 0) return 'pick_avail'
       if (plan.chosen_session) return 'confirmed'

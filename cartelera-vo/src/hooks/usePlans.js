@@ -39,25 +39,28 @@ export default function usePlans(user, friends) {
   }, [fetchPlans])
 
   // Create a new plan after match detection
-  // If session is provided (from MatchOverlay), use it directly
-  async function createPlan(movieTitle, partnerId, session) {
+  // sessions is an array of selected sessions from MatchPopup
+  async function createPlan(movieTitle, partnerId, sessions) {
     if (!user) return null
 
-    let proposed = session
-    if (!proposed) {
+    // Normalize: accept single session (legacy) or array
+    let sessionList = Array.isArray(sessions) ? sessions : sessions ? [sessions] : null
+    if (!sessionList || sessionList.length === 0) {
       // Fallback: fetch sessions if not provided
-      const sessions = await getAllSessionsForMovie(movieTitle)
-      proposed = findNearestSession(sessions)
+      const fetched = await getAllSessionsForMovie(movieTitle)
+      const nearest = findNearestSession(fetched)
+      if (!nearest) return null
+      sessionList = [nearest]
     }
-
-    if (!proposed) return null
 
     const plan = {
       movie_title: movieTitle,
       state: 'proposed',
       initiator_id: user.id,
       partner_id: partnerId,
-      proposed_session: proposed,
+      proposed_session: sessionList[0], // best/nearest for display
+      initiator_availability: sessionList, // ALL selected sessions
+      initiator_response: 'yes', // initiator confirmed availability
       participants: [user.id, partnerId],
     }
 
@@ -82,37 +85,33 @@ export default function usePlans(user, friends) {
     const amIInitiator = plan.initiator_id === user.id
     const myResponse = amIInitiator ? plan.initiator_response : plan.partner_response
     const theirResponse = amIInitiator ? plan.partner_response : plan.initiator_response
+    const theirAvail = amIInitiator ? plan.partner_availability : plan.initiator_availability
 
-    // Both said yes → confirmed
+    // Terminal states
     if (plan.state === 'confirmed') return 'confirmed'
     if (plan.state === 'no_match') return 'no_match'
 
-    // I haven't responded yet and no availability sent
-    if (!myResponse && !theirResponse) return 'proposed'
-    if (!myResponse && theirResponse === 'no') {
-      // They said no and sent availability → I pick from theirs
-      const theirAvail = amIInitiator ? plan.partner_availability : plan.initiator_availability
-      if (theirAvail && theirAvail.length > 0) return 'pick_theirs'
-      return 'proposed'
+    // NEW FLOW: If the other person has sent availability and I haven't responded → pick from theirs
+    if (!myResponse && theirAvail && theirAvail.length > 0) {
+      return 'pick_theirs'
     }
-    if (!myResponse && theirResponse === 'yes') return 'proposed'
 
-    // I said yes
+    // I haven't responded, they haven't sent availability
+    if (!myResponse && !theirResponse) return 'proposed'
+    if (!myResponse && theirResponse === 'yes') return 'proposed'
+    if (!myResponse && theirResponse === 'no') return 'proposed'
+
+    // I said yes — waiting for them
     if (myResponse === 'yes') {
       if (theirResponse === 'yes') return 'confirmed'
-      if (theirResponse === 'no') {
-        const theirAvail = amIInitiator ? plan.partner_availability : plan.initiator_availability
-        if (theirAvail && theirAvail.length > 0) return 'pick_theirs'
-        return 'waiting_them'
-      }
+      if (theirAvail && theirAvail.length > 0) return 'pick_theirs'
       return 'waiting_them'
     }
 
-    // I said no
+    // I said no (legacy flow fallback)
     if (myResponse === 'no') {
       const myAvail = amIInitiator ? plan.initiator_availability : plan.partner_availability
       if (!myAvail || myAvail.length === 0) return 'pick_avail'
-      // I've sent availability
       if (plan.chosen_session) return 'confirmed'
       return 'waiting_pick'
     }

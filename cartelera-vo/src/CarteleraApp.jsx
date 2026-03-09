@@ -136,14 +136,14 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     }
   }
 
-  // Handle match → create plan directly with selected session
-  async function handleMatchSelectSession(session, friend) {
+  // Handle match → create plan with selected sessions (array)
+  async function handleMatchSelectSession(sessions, friend) {
     if (!matchPopup) return
     let plan
     if (isDemoMode) {
-      plan = await demo.createDemoPlan(matchPopup.movie.title, user?.id || "local-user", session)
+      plan = await demo.createDemoPlan(matchPopup.movie.title, user?.id || "local-user", sessions)
     } else {
-      plan = await realPlans.createPlan(matchPopup.movie.title, friend.id, session)
+      plan = await realPlans.createPlan(matchPopup.movie.title, friend.id, sessions)
     }
     setMatchPopup(null)
     if (plan) {
