@@ -439,5 +439,42 @@ END;
 $$;
 
 -- ============================================================================
+-- 9. Game Scores (Brick Breaker leaderboard)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS game_scores (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  score integer NOT NULL DEFAULT 0,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE game_scores ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read scores (for leaderboard)
+CREATE POLICY "game_scores_select" ON game_scores FOR SELECT USING (true);
+
+-- Users can insert/update their own score
+CREATE POLICY "game_scores_insert" ON game_scores FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "game_scores_update" ON game_scores FOR UPDATE USING (auth.uid() = user_id);
+
+-- Allow anon key to insert/read (game uses anon key directly)
+GRANT SELECT, INSERT, UPDATE ON game_scores TO anon;
+
+-- Leaderboard view: joins scores with profiles for names + avatars
+CREATE OR REPLACE VIEW leaderboard AS
+SELECT
+  gs.user_id,
+  gs.score,
+  COALESCE(p.nombre_display, p.nombre, 'Cinero') AS nombre_display,
+  p.avatar_url
+FROM game_scores gs
+LEFT JOIN perfiles p ON p.id = gs.user_id
+ORDER BY gs.score DESC;
+
+-- Grant access to anon
+GRANT SELECT ON leaderboard TO anon;
+
+-- ============================================================================
 -- Done! Verify with: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 -- ============================================================================

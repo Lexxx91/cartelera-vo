@@ -409,6 +409,14 @@ export default function BrickBreaker({ user, onClose }) {
     if (finalScore <= 0) return
     setLoadingRank(true)
 
+    // Build fallback entry for current user (always shown if DB fails)
+    const myEntry = {
+      user_id: user?.id || 'demo',
+      score: finalScore,
+      nombre_display: user?.user_metadata?.full_name || 'Tu',
+      avatar_url: user?.user_metadata?.avatar_url || null,
+    }
+
     try {
       // Save score (upsert — only if higher)
       if (!isDemoMode && user?.id) {
@@ -440,10 +448,20 @@ export default function BrickBreaker({ user, onClose }) {
       )
       if (lbRes.ok) {
         const lb = await lbRes.json()
-        setLeaderboard(lb)
+        if (Array.isArray(lb) && lb.length > 0) {
+          setLeaderboard(lb)
+        } else {
+          // DB returned empty — show self as fallback
+          setLeaderboard([myEntry])
+        }
+      } else {
+        // DB query failed — show self as fallback
+        setLeaderboard([myEntry])
       }
     } catch (err) {
       console.warn('Leaderboard error:', err)
+      // Network error — show self as fallback
+      setLeaderboard([myEntry])
     } finally {
       setLoadingRank(false)
     }
