@@ -8,6 +8,7 @@ export const DEMO_FRIEND = {
   nombre: "Carlos",
   nombre_display: "Carlos",
   avatar_url: null,
+  email: null,
   invite_code: "GOFIO42",
   isDemo: true,
 }
@@ -18,6 +19,7 @@ export const DEMO_FRIEND_LUCIA = {
   nombre: "Lucía",
   nombre_display: "Lucía",
   avatar_url: null,
+  email: null,
   invite_code: "TIMPLE77",
   isDemo: true,
 }
@@ -318,6 +320,14 @@ export default function useDemo(movies) {
     }))
   }
 
+  // Save payer (roulette result)
+  function savePayer(planId, payerName) {
+    setDemoPlans(prev => prev.map(p => {
+      if (p.id !== planId) return p
+      return { ...p, payer_name: payerName, updated_at: new Date().toISOString() }
+    }))
+  }
+
   // Reject all → no_match
   function rejectAll(planId) {
     setDemoPlans(prev => prev.map(p => {
@@ -385,6 +395,7 @@ export default function useDemo(movies) {
     sendAvailability,
     pickSession,
     rejectAll,
+    savePayer,
     getDemoSuggestions,
     getDemoFriendsOfFriend,
     getDemoMoviesInCommon,

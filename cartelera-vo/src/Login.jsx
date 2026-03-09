@@ -12,6 +12,32 @@ export default function Login({ onDemoMode }) {
   const [posters, setPosters] = useState([])
   const [justValidated, setJustValidated] = useState(false)
 
+  // Deep link: auto-fill invite code from URL ?code= param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const urlCode = params.get('code')
+    if (urlCode && !isReturningUser) {
+      const code = urlCode.trim().toUpperCase()
+      setInviteCode(code)
+      // Validate the code immediately
+      ;(async () => {
+        setValidating(true)
+        try {
+          const { data, error: rpcError } = await supabase
+            .rpc('validate_invite_code', { p_code: code })
+          if (!rpcError && data) {
+            localStorage.setItem('vose_invite_code', code)
+            setCodeValidated(true)
+            setJustValidated(true)
+          }
+        } catch {}
+        setValidating(false)
+      })()
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
   // Fetch real movie posters on mount (cartelera has no RLS → works with anon key)
   useEffect(() => {
     async function fetchPosters() {

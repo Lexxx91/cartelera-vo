@@ -64,7 +64,7 @@ export default function FriendDetailSheet({
     : null
 
   return (
-    <div style={{position:"absolute",inset:0,zIndex:200,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+    <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
       <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.72)"}} />
       <div style={{position:"relative",background:"#111",borderRadius:"24px 24px 0 0",border:"1px solid rgba(255,255,255,0.08)",padding:"0 20px 44px",maxHeight:"85vh",overflowY:"auto"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"12px auto 20px"}} />

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 
-export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies }) {
+export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount }) {
   const [editingName, setEditingName] = useState(false)
   const [displayName, setDisplayName] = useState(profile?.nombre_display || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Cinefilo")
   const [logoutConfirm, setLogoutConfirm] = useState(false)
@@ -33,17 +33,20 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   }
 
   function copyCode() {
-    navigator.clipboard.writeText(inviteCode).then(() => {
+    const url = `https://carteleravo.app?code=${inviteCode}`
+    navigator.clipboard.writeText(url).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
   }
 
   function shareCode() {
+    const url = `https://carteleravo.app?code=${inviteCode}`
     if (navigator.share) {
       navigator.share({
         title: "VOSE — El cine como debe sonar",
-        text: `Unite a VOSE! Descubre que pelis en version original hay en Las Palmas y organiza planes con amigos.\n\nTu codigo: ${inviteCode}\nEntra en: carteleravo.app`,
+        text: `Unite a VOSE! Descubre que pelis en version original hay en Las Palmas y organiza planes con amigos.`,
+        url,
       }).catch(() => {})
     } else {
       copyCode()
@@ -51,15 +54,27 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   }
 
   const getPoster = (title) => (movies || []).find(m => m.title === title)?.poster
-  const watchedMovies = [...(profile?.watched || [])].reverse().slice(0, 15)
+  const watchedMovies = [...(profile?.watched || [])].reverse().slice(0, 20)
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)",overflow:"hidden"}}>
-      {/* Header — landing style */}
-      <div style={{padding:"18px 20px 10px",flexShrink:0}}>
-        <h1 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:28,lineHeight:0.95,letterSpacing:"-0.01em",textTransform:"uppercase"}}>
-          <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent"}}>PER</span><span style={{color:"#ff3b3b",WebkitTextStroke:"none"}}>FIL</span>
-        </h1>
+      {/* Header with logout */}
+      <div style={{padding:"18px 20px 14px",flexShrink:0,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <h1 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:22,color:"#fff",letterSpacing:"0.02em",textTransform:"uppercase"}}>Perfil</h1>
+        {!logoutConfirm ? (
+          <button onClick={() => setLogoutConfirm(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,color:"rgba(255,255,255,0.3)",display:"flex",alignItems:"center"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline points="16,17 21,12 16,7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        ) : (
+          <div style={{display:"flex",gap:6,alignItems:"center",animation:"fadeIn 0.2s ease"}}>
+            <button onClick={() => setLogoutConfirm(false)} style={{padding:"5px 12px",borderRadius:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>No</button>
+            <button onClick={onLogout} style={{padding:"5px 12px",borderRadius:8,background:"rgba(255,69,58,0.15)",border:"1px solid rgba(255,69,58,0.3)",color:"#ff453a",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Salir</button>
+          </div>
+        )}
       </div>
 
       {/* Scrollable content */}
@@ -127,70 +142,100 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
           </div>
         </div>
 
-        {/* Invite code */}
-        <div style={{padding:"0 20px",marginBottom:20}}>
-          <p style={{margin:"0 0 10px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Tu codigo de invitacion</p>
-          <div style={{background:"rgba(255,59,59,0.04)",border:"1px solid rgba(255,59,59,0.15)",borderRadius:20,padding:"20px",textAlign:"center"}}>
-            <div style={{fontSize:30,fontWeight:300,letterSpacing:"0.18em",color:"#fff",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>{inviteCode}</div>
-            <p style={{margin:"0 0 16px",fontSize:12,color:"rgba(255,255,255,0.3)",lineHeight:1.5}}>Comparte este codigo para invitar amigos a VO<span style={{color:"#ff3b3b",fontWeight:700}}>SE</span></p>
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={copyCode} style={{flex:1,padding:13,borderRadius:14,background:copied?"rgba(255,59,59,0.12)":"rgba(255,255,255,0.06)",border:`1px solid ${copied?"rgba(255,59,59,0.25)":"rgba(255,255,255,0.1)"}`,color:copied?"#ff3b3b":"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
-                {copied ? "Copiado ✓" : "Copiar"}
+        {/* Credit card invite */}
+        <div style={{padding:"0 20px",marginBottom:24}}>
+          <div style={{
+            background:"linear-gradient(135deg, #ff3b3b 0%, #cc2020 50%, #991515 100%)",
+            borderRadius:20,
+            minHeight:190,
+            overflow:"hidden",
+            position:"relative",
+            padding:"22px 24px",
+            display:"flex",
+            flexDirection:"column",
+            justifyContent:"space-between",
+          }}>
+            {/* Decorative circles */}
+            <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:"rgba(255,255,255,0.08)"}} />
+            <div style={{position:"absolute",bottom:-40,left:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,0.05)"}} />
+            <div style={{position:"absolute",top:60,right:40,width:60,height:60,borderRadius:"50%",background:"rgba(255,255,255,0.04)"}} />
+
+            {/* Top row: VOSE logo + invitee count */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative",zIndex:1}}>
+              <div>
+                <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:22,fontWeight:400,color:"#fff",letterSpacing:"0.02em"}}>VO</span>
+                <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:22,fontWeight:400,color:"rgba(255,255,255,0.45)",letterSpacing:"0.02em"}}>SE</span>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <p style={{margin:0,fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.55)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Amigos invitados</p>
+                <p style={{margin:"2px 0 0",fontSize:28,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",lineHeight:1}}>{inviteeCount ?? 0}</p>
+              </div>
+            </div>
+
+            {/* Center: Invite code */}
+            <div style={{textAlign:"center",position:"relative",zIndex:1,margin:"16px 0"}}>
+              <p style={{margin:0,fontSize:28,fontWeight:300,letterSpacing:"0.22em",color:"#fff",fontFamily:"'DM Sans',sans-serif"}}>{inviteCode}</p>
+              <p style={{margin:"6px 0 0",fontSize:11,color:"rgba(255,255,255,0.5)"}}>Tu codigo de invitacion</p>
+            </div>
+
+            {/* Bottom: Copy + Share */}
+            <div style={{display:"flex",gap:10,position:"relative",zIndex:1}}>
+              <button onClick={copyCode} style={{flex:1,padding:11,borderRadius:12,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",backdropFilter:"blur(10px)",transition:"all 0.2s"}}>
+                {copied ? "Copiado ✓" : "Copiar enlace"}
               </button>
-              <button onClick={shareCode} style={{flex:1,padding:13,borderRadius:14,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              <button onClick={shareCode} style={{flex:1,padding:11,borderRadius:12,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",backdropFilter:"blur(10px)"}}>
                 Compartir
               </button>
             </div>
           </div>
         </div>
 
-        {/* Watch history — horizontal poster scroll */}
+        {/* Watch history — vertical list */}
         {watchedMovies.length > 0 && (
-          <div style={{marginBottom:20}}>
-            <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Historial</p>
-            <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+          <div style={{padding:"0 20px",marginBottom:20}}>
+            <p style={{margin:"0 0 12px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Historial</p>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {watchedMovies.map((w, i) => {
                 const poster = getPoster(w.title)
                 return (
-                  <div key={i} style={{flexShrink:0,width:100}}>
-                    <div style={{width:100,height:150,borderRadius:8,overflow:"hidden",background:"linear-gradient(145deg,#1a1a1a,#111)",marginBottom:6,position:"relative"}}>
+                  <div key={i} style={{display:"flex",gap:12,alignItems:"center",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:14,padding:10}}>
+                    {/* Poster thumbnail */}
+                    <div style={{width:52,height:78,borderRadius:8,overflow:"hidden",flexShrink:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
                       {poster ? (
                         <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
                       ) : (
-                        <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",padding:8}}>
-                          <span style={{fontSize:10,color:"rgba(255,255,255,0.35)",textAlign:"center",lineHeight:1.3}}>{w.title}</span>
+                        <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",padding:4}}>
+                          <span style={{fontSize:8,color:"rgba(255,255,255,0.3)",textAlign:"center",lineHeight:1.2}}>{w.title}</span>
                         </div>
                       )}
-                      {/* Gradient overlay */}
-                      <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)"}} />
-                      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 8px"}}>
-                        <p style={{margin:0,fontSize:9,fontWeight:700,color:"#fff",lineHeight:1.2,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{w.title}</p>
-                      </div>
                     </div>
-                    {w.rating && <div style={{fontSize:10,color:"#ffd60a",fontWeight:700,textAlign:"center"}}>★ {w.rating}</div>}
+                    {/* Info */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <p style={{margin:"0 0 3px",fontSize:14,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.title}</p>
+                      {w.rating && (
+                        <div style={{display:"flex",gap:2,marginBottom:4}}>
+                          {[1,2,3,4,5].map(s => (
+                            <span key={s} style={{fontSize:12,color:s<=w.rating?"#ffd60a":"rgba(255,255,255,0.1)"}}>★</span>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                        {w.date && <span style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>{w.date}</span>}
+                        {w.time && <span style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>· {w.time}</span>}
+                      </div>
+                      {w.cinema && <p style={{margin:"2px 0 0",fontSize:11,color:"rgba(255,255,255,0.25)"}}>📍 {w.cinema}</p>}
+                      {w.with && w.with.length > 0 && (
+                        <p style={{margin:"2px 0 0",fontSize:11,color:"rgba(255,255,255,0.25)"}}>
+                          con {w.with.join(", ")}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )
               })}
             </div>
           </div>
         )}
-
-        {/* Logout */}
-        <div style={{padding:"0 20px"}}>
-          {!logoutConfirm ? (
-            <button onClick={() => setLogoutConfirm(true)} style={{width:"100%",borderRadius:14,padding:"14px",background:"rgba(255,69,58,0.06)",border:"1px solid rgba(255,69,58,0.15)",color:"rgba(255,69,58,0.6)",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",boxSizing:"border-box"}}>
-              Cerrar sesion
-            </button>
-          ) : (
-            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:16}}>
-              <p style={{margin:"0 0 12px",fontSize:14,color:"rgba(255,255,255,0.6)",textAlign:"center"}}>Seguro que quieres salir?</p>
-              <div style={{display:"flex",gap:10}}>
-                <button onClick={() => setLogoutConfirm(false)} style={{flex:1,borderRadius:12,padding:"12px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.6)",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cancelar</button>
-                <button onClick={onLogout} style={{flex:1,borderRadius:12,padding:"12px",background:"rgba(255,69,58,0.15)",border:"1px solid rgba(255,69,58,0.3)",color:"#ff453a",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Salir</button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )

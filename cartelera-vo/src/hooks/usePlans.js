@@ -270,6 +270,12 @@ export default function usePlans(user, friends) {
     await fetchPlans()
   }
 
+  // Save who pays (roulette result)
+  async function savePayer(planId, payerName) {
+    await supabase.from("planes").update({ payer_name: payerName }).eq("id", planId)
+    await fetchPlans()
+  }
+
   // Get confirmed plans from friends that I can join
   async function getOpenPlans() {
     if (!user || !friends || friends.length === 0) return []
@@ -308,6 +314,7 @@ export default function usePlans(user, friends) {
     joinPlan,
     leavePlan,
     getOpenPlans,
+    savePayer,
     refresh: fetchPlans,
   }
 }

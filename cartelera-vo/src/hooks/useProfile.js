@@ -4,6 +4,7 @@ import { supabase } from '../supabase.js'
 export default function useProfile(user) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [inviteeCount, setInviteeCount] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -19,6 +20,7 @@ export default function useProfile(user) {
         watched: [],
         alerts: [],
       })
+      setInviteeCount(2) // mock for demo
       setLoading(false)
       return
     }
@@ -64,6 +66,18 @@ export default function useProfile(user) {
         setProfile(newProfile)
       }
       setLoading(false)
+    })()
+  }, [user])
+
+  // Fetch invitee count
+  useEffect(() => {
+    if (!user || user.isDemo) return
+    ;(async () => {
+      const { count } = await supabase
+        .from("perfiles")
+        .select("id", { count: 'exact', head: true })
+        .eq("invited_by", user.id)
+      setInviteeCount(count || 0)
     })()
   }, [user])
 
@@ -151,5 +165,5 @@ export default function useProfile(user) {
     return publicUrl
   }
 
-  return { profile, loading, updateProfile, uploadAvatar }
+  return { profile, loading, updateProfile, uploadAvatar, inviteeCount }
 }

@@ -607,7 +607,7 @@ export default function BrickBreaker({ user, onClose }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', flex: 1, gap: 0, minHeight: 0,
-      maxHeight: 'calc(100vh - 56px - 56px - 40px)',
+      maxHeight: 'calc(100vh - 56px - 56px - 70px)',
     }}>
       {/* Game header */}
       <div style={{

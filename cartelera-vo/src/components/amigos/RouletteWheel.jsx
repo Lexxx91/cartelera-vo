@@ -3,22 +3,22 @@ import { useState, useRef, useEffect } from 'react'
 const PRE_SPIN_COPY = [
   "Llego el momento incomodo...",
   "A ver quien afloja la cartera...",
-  "Alguien tiene que pagar, chacho...",
+  "Alguien tiene que comprar, chacho...",
   "Esto se pone interesante...",
 ]
 
 const POST_SPIN_COPY = [
-  "¡Te toca, chacho!",
+  "¡Te toca comprar, chacho!",
   "Ni pa'l cine te libras",
   "¡A soltar la pasta!",
-  "Invitas tu hoy, mano",
+  "Compras tu hoy, mano",
   "¡Rascate el bolsillo!",
   "El destino ha hablado",
 ]
 
 const SEGMENT_COLORS = ['#ff3b3b', '#1a1a1a', '#cc2f2f', '#111111']
 
-export default function RouletteWheel({ participants, onClose }) {
+export default function RouletteWheel({ participants, onDone }) {
   const [spinning, setSpinning] = useState(false)
   const [finished, setFinished] = useState(false)
   const [winnerIndex, setWinnerIndex] = useState(null)
@@ -252,7 +252,7 @@ export default function RouletteWheel({ participants, onClose }) {
               Girar otra vez
             </button>
             <button
-              onClick={onClose}
+              onClick={() => onDone && onDone(winner.name)}
               style={{
                 padding: '13px 24px',
                 borderRadius: 100,

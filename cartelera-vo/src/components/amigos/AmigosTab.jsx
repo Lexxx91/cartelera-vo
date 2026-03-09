@@ -2,6 +2,39 @@ import { useState, useEffect } from 'react'
 import PlanSheet from './PlanSheet.jsx'
 import FriendDetailSheet from './FriendDetailSheet.jsx'
 
+// Countdown helper: returns "Xd Xh" or "Xh Xm" or "Ahora!" text
+function useCountdown(session) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000) // update every minute
+    return () => clearInterval(t)
+  }, [])
+
+  if (!session?.date || !session?.time) return null
+  const [year, month, day] = session.date.split("-").map(Number)
+  const [hours, minutes] = (session.time || "00:00").split(":").map(Number)
+  if (!year) return null
+  const target = new Date(year, month - 1, day, hours || 0, minutes || 0).getTime()
+  const diff = target - now
+  if (diff <= 0) return null
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hrs = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  if (days > 0) return `${days}d ${hrs}h`
+  if (hrs > 0) return `${hrs}h ${mins}m`
+  return `${mins}m`
+}
+
+function CountdownBadge({ session }) {
+  const text = useCountdown(session)
+  if (!text) return null
+  return (
+    <span style={{fontSize:10,fontWeight:700,color:"#ff3b3b",background:"rgba(255,59,59,0.1)",padding:"3px 8px",borderRadius:8,whiteSpace:"nowrap"}}>
+      ⏱ {text}
+    </span>
+  )
+}
+
 // Open Google Calendar with pre-filled event + invitees
 function addToCalendar(movieTitle, session, inviteeEmails) {
   if (!session) return
@@ -43,6 +76,7 @@ export default function AmigosTab({
   getDemoMoviesInCommon,
   onDiscoverUsers,
   onMarkWatched,
+  onSavePayer,
 }) {
   const [activePlan, setActivePlan] = useState(null)
   const [selectedFriend, setSelectedFriend] = useState(null)
@@ -93,6 +127,7 @@ export default function AmigosTab({
             onPickSession={(session) => onPickSession(plan.id, session)}
             onRejectAll={() => onRejectAll(plan.id)}
             onClose={() => setActivePlan(null)}
+            onSavePayer={(payerName) => onSavePayer && onSavePayer(plan.id, payerName)}
           />
         </div>
       )
@@ -131,12 +166,9 @@ export default function AmigosTab({
         />
       )}
 
-      {/* Header — landing style */}
-      <div style={{padding:"18px 20px 10px",flexShrink:0}}>
-        <h1 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:28,lineHeight:0.95,letterSpacing:"-0.01em",textTransform:"uppercase"}}>
-          <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent"}}>AMIGOS &</span>{' '}
-          <span style={{color:"#ff3b3b",WebkitTextStroke:"none"}}>PLANES</span>
-        </h1>
+      {/* Header */}
+      <div style={{padding:"18px 20px 14px",flexShrink:0}}>
+        <h1 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:22,color:"#fff",letterSpacing:"0.02em",textTransform:"uppercase"}}>Amigos & Planes</h1>
       </div>
 
       {/* Scrollable content */}
@@ -273,6 +305,7 @@ export default function AmigosTab({
                               return <span key={pid} style={{fontSize:10,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:6}}>{name}</span>
                             })}
                             <span style={{fontSize:10,fontWeight:700,color:"#ff3b3b",marginLeft:4}}>✓ Confirmado</span>
+                            <CountdownBadge session={plan.chosen_session} />
                           </div>
                         </div>
                       </div>
@@ -307,7 +340,17 @@ export default function AmigosTab({
                           <button
                             onClick={() => {
                               if (ratingValue > 0 && onMarkWatched) {
-                                onMarkWatched(plan.movie_title, ratingValue)
+                                const planContext = {
+                                  cinema: plan.chosen_session?.cinema,
+                                  time: plan.chosen_session?.time,
+                                  with: (plan.participants || [])
+                                    .filter(pid => pid !== user?.id)
+                                    .map(pid => {
+                                      const f = friends.find(fr => fr.id === pid)
+                                      return f?.nombre_display || f?.nombre || "Amigo"
+                                    }),
+                                }
+                                onMarkWatched(plan.movie_title, ratingValue, planContext)
                                 setMarkedWatched(prev => new Set([...prev, plan.id]))
                                 setRatingPlan(null)
                               }

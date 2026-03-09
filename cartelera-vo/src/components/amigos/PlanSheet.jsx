@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getAllSessionsForMovie, sKey } from '../../utils.js'
 import RouletteWheel from './RouletteWheel.jsx'
 
@@ -27,11 +27,36 @@ function addToCalendar(movieTitle, session, inviteeEmails) {
   window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
-export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends }) {
+// Countdown helper
+function formatCountdown(session) {
+  if (!session?.date || !session?.time) return null
+  const [year, month, day] = session.date.split("-").map(Number)
+  const [hours, minutes] = (session.time || "00:00").split(":").map(Number)
+  if (!year) return null
+  const target = new Date(year, month - 1, day, hours || 0, minutes || 0).getTime()
+  const diff = target - Date.now()
+  if (diff <= 0) return null
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hrs = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  if (days > 0) return `${days}d ${hrs}h`
+  if (hrs > 0) return `${hrs}h ${mins}m`
+  return `${mins}m`
+}
+
+export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends, onSavePayer }) {
   const [allSessions, setAllSessions] = useState([])
   const [myAvail, setMyAvail] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [showRoulette, setShowRoulette] = useState(false)
+  const sheetRef = useRef(null)
+
+  // Scroll sheet to top when showing roulette
+  useEffect(() => {
+    if (showRoulette && sheetRef.current) {
+      sheetRef.current.scrollTop = 0
+    }
+  }, [showRoulette])
 
   // Load all sessions when entering pick_avail
   useEffect(() => {
@@ -58,9 +83,9 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
   const chosen = plan.chosen_session
 
   return (
-    <div style={{position:"absolute",inset:0,zIndex:100,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+    <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
       <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.72)"}} />
-      <div style={{position:"relative",background:"#111",borderRadius:"24px 24px 0 0",border:"1px solid rgba(255,255,255,0.08)",padding:"0 20px 44px",maxHeight:"90vh",overflowY:"auto"}}>
+      <div ref={sheetRef} style={{position:"relative",background:"#111",borderRadius:"24px 24px 0 0",border:"1px solid rgba(255,255,255,0.08)",padding:"0 20px 44px",maxHeight:"85vh",overflowY:"auto",marginBottom:0}}>
         <div style={{width:36,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"12px auto 20px"}} />
 
         {/* Header */}
@@ -164,22 +189,37 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
         )}
 
         {/* CONFIRMED */}
-        {myState === "confirmed" && chosen && !showRoulette && (
-          <div style={{background:"rgba(255,59,59,0.07)",border:"1px solid rgba(255,59,59,0.2)",borderRadius:16,padding:18,textAlign:"center"}}>
-            <p style={{fontSize:11,fontWeight:600,color:"#ff3b3b",letterSpacing:"0.08em",textTransform:"uppercase",margin:"0 0 10px"}}>Plan confirmado ✓</p>
-            <p style={{fontSize:26,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{chosen.day || chosen.date} · {chosen.time}</p>
-            <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:"0 0 16px"}}>📍 {chosen.cinema}</p>
-            <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={() => addToCalendar(plan.movie_title, chosen, [plan.partner?.email, user?.email].filter(Boolean))} style={{padding:"13px 24px",borderRadius:100,background:"#ff3b3b",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#000" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#000" strokeWidth="2" strokeLinecap="round"/></svg>
-                Añadir al calendario
-              </button>
-              <button onClick={() => setShowRoulette(true)} style={{padding:"13px 24px",borderRadius:100,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.6)",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-                🎰 ¿Quién paga?
-              </button>
+        {myState === "confirmed" && chosen && !showRoulette && (() => {
+          const countdown = formatCountdown(chosen)
+          return (
+            <div style={{background:"rgba(255,59,59,0.07)",border:"1px solid rgba(255,59,59,0.2)",borderRadius:16,padding:18,textAlign:"center"}}>
+              <p style={{fontSize:11,fontWeight:600,color:"#ff3b3b",letterSpacing:"0.08em",textTransform:"uppercase",margin:"0 0 10px"}}>Plan confirmado ✓</p>
+              <p style={{fontSize:26,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{chosen.day || chosen.date} · {chosen.time}</p>
+              <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:"0 0 4px"}}>📍 {chosen.cinema}</p>
+              {countdown && (
+                <p style={{fontSize:13,fontWeight:700,color:"#ff3b3b",margin:"0 0 16px"}}>⏱ Quedan {countdown}</p>
+              )}
+              {!countdown && <div style={{height:12}} />}
+              {plan.payer_name && (
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:14}}>
+                  <span style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.6)"}}>🎰 Compra las entradas: <strong style={{color:"#ff3b3b"}}>{plan.payer_name}</strong></span>
+                  <button onClick={() => setShowRoulette(true)} style={{padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.35)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cambiar</button>
+                </div>
+              )}
+              <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                <button onClick={() => addToCalendar(plan.movie_title, chosen, [plan.partner?.email, user?.email].filter(Boolean))} style={{padding:"13px 24px",borderRadius:100,background:"#ff3b3b",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#000" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#000" strokeWidth="2" strokeLinecap="round"/></svg>
+                  Añadir al calendario
+                </button>
+                {!plan.payer_name && (
+                  <button onClick={() => setShowRoulette(true)} style={{padding:"13px 24px",borderRadius:100,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.6)",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                    🎰 ¿Quien compra las entradas?
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* ROULETTE */}
         {myState === "confirmed" && showRoulette && (() => {
@@ -195,7 +235,10 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
           } else {
             participants.push({ name: partnerName, avatar_url: null })
           }
-          return <RouletteWheel participants={participants} onClose={() => setShowRoulette(false)} />
+          return <RouletteWheel participants={participants} onDone={(winnerName) => {
+            if (onSavePayer) onSavePayer(winnerName)
+            setShowRoulette(false)
+          }} />
         })()}
 
         {/* NO_MATCH */}

@@ -25,7 +25,7 @@ export default function CarteleraApp({ user, onLogout }) {
   const [localVotes, setLocalVotes] = useState({}) // local votes for demo mode
 
   // Initialize hooks
-  const { profile, loading: profileLoading, updateProfile, uploadAvatar } = useProfile(user)
+  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount } = useProfile(user)
   const { friends: realFriends, pendingIn, pendingOut, acceptRequest, removeFriend, getFriendsOfFriend, sendDirectRequest, discoverUsers } = useFriends(user)
   const realVotes = useVotes(user, realFriends)
   const realPlans = usePlans(user, realFriends)
@@ -195,15 +195,28 @@ export default function CarteleraApp({ user, onLogout }) {
     addToast({ type: "join", emoji: "🎉", title: "Te has apuntado", body: "Ya estas en el plan" })
   }
 
-  // Mark movie as watched with rating
-  function handleMarkWatched(movieTitle, rating) {
-    const entry = { title: movieTitle, rating, date: new Date().toISOString().split('T')[0] }
+  // Mark movie as watched with rating + optional plan context
+  function handleMarkWatched(movieTitle, rating, planContext) {
+    const entry = {
+      title: movieTitle,
+      rating,
+      date: new Date().toISOString().split('T')[0],
+      ...(planContext?.cinema && { cinema: planContext.cinema }),
+      ...(planContext?.time && { time: planContext.time }),
+      ...(planContext?.with && planContext.with.length > 0 && { with: planContext.with }),
+    }
     const currentWatched = profile?.watched || []
     // Avoid duplicates
     if (currentWatched.some(w => w.title === movieTitle)) return
     const updated = [...currentWatched, entry]
     updateProfile({ watched: updated })
     addToast({ type: "watched", emoji: "🍿", title: "Marcada como vista", body: `${movieTitle} — ${"★".repeat(rating)}` })
+  }
+
+  // Save payer (roulette result)
+  function handleSavePayer(planId, payerName) {
+    if (isDemoMode) demo.savePayer(planId, payerName)
+    else realPlans.savePayer(planId, payerName)
   }
 
   // Friend suggestions
@@ -293,6 +306,7 @@ export default function CarteleraApp({ user, onLogout }) {
             getDemoMoviesInCommon={isDemoMode ? demo.getDemoMoviesInCommon : null}
             onDiscoverUsers={isDemoMode ? demo.getDemoDiscoverUsers : discoverUsers}
             onMarkWatched={handleMarkWatched}
+            onSavePayer={handleSavePayer}
           />
         )}
         {tab === "perfil" && (
@@ -304,6 +318,7 @@ export default function CarteleraApp({ user, onLogout }) {
             onLogout={onLogout}
             myVotes={myVotes}
             movies={movies}
+            inviteeCount={inviteeCount}
           />
         )}
       </div>
