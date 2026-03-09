@@ -20,6 +20,7 @@ import AmigosTab from './components/amigos/AmigosTab.jsx'
 import ProfileTab from './components/perfil/ProfileTab.jsx'
 import PlanConfirmedOverlay from './components/amigos/PlanConfirmedOverlay.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
+import OnboardingStories from './components/onboarding/OnboardingStories.jsx'
 
 export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearPendingPlan }) {
   const [tab, setTab] = useState("cartelera")
@@ -28,6 +29,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [openPlans, setOpenPlans] = useState([])
   const [localVotes, setLocalVotes] = useState({}) // local votes for demo mode
   const [confirmedOverlay, setConfirmedOverlay] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   // Initialize hooks
   const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking } = useProfile(user)
@@ -89,6 +91,21 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     onClearPendingPlan?.()
     setTab("amigos")
   }, [pendingPlanJoin])
+
+  // Check if onboarding is needed (new users only)
+  useEffect(() => {
+    if (!profile || isDemoMode) return
+    const localDone = localStorage.getItem('vose_onboarding_done')
+    if (!localDone && !profile.onboarding_done) {
+      setShowOnboarding(true)
+    }
+  }, [profile, isDemoMode])
+
+  function handleOnboardingComplete() {
+    setShowOnboarding(false)
+    localStorage.setItem('vose_onboarding_done', 'true')
+    updateProfile({ onboarding_done: true })
+  }
 
   // Handle swipe vote
   async function handleSwipe(movie, direction) {
@@ -322,6 +339,14 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
         />
       )}
 
+      {/* Onboarding stories overlay */}
+      {showOnboarding && (
+        <OnboardingStories
+          onComplete={handleOnboardingComplete}
+          onConnectWhatsApp={generateWhatsAppToken}
+        />
+      )}
+
       {/* Tab content */}
       <div style={{paddingBottom:"calc(70px + env(safe-area-inset-bottom, 0px))",height:"100dvh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
         {tab === "cartelera" && (
@@ -373,6 +398,10 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
               realPlans.leavePlan(planId)
               addToast({ type: "info", emoji: "👋", title: "Has salido del plan", body: "Ya no estás apuntado" })
             }}
+            onConnectWhatsApp={generateWhatsAppToken}
+            onUnlinkWhatsApp={unlinkWhatsApp}
+            waLinking={waLinking}
+            whatsappLinked={!!profile?.whatsapp_jid}
           />
         )}
         {tab === "perfil" && (

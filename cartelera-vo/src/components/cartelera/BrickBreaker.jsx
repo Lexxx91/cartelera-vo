@@ -122,6 +122,23 @@ export default function BrickBreaker({ user, onClose, campaignOverrides }) {
   const brandImgRef = useRef(null)      // normal brick image (processed)
   const multiHitImgRef = useRef(null)   // multi-hit brick image (processed)
 
+  // Track active campaign id as state to trigger image reloads
+  const [activeCampaignId, setActiveCampaignId] = useState(() => getActiveCampaign(campaignOverrides)?.id || null)
+
+  // Keep campaign in sync when overrides arrive from Supabase
+  useEffect(() => {
+    const newCampaign = getActiveCampaign(campaignOverrides)
+    campaignRef.current = newCampaign
+    const newId = newCampaign?.id || null
+    if (newId !== activeCampaignId) {
+      setActiveCampaignId(newId)
+      // Reset image refs so they reload for the new campaign
+      brandImgRef.current = null
+      multiHitImgRef.current = null
+    }
+  }, [campaignOverrides])
+
+  // Load campaign images — re-runs when active campaign changes
   useEffect(() => {
     const campaign = campaignRef.current
     if (!campaign?.brickImage) return
@@ -158,7 +175,7 @@ export default function BrickBreaker({ user, onClose, campaignOverrides }) {
     if (campaign.multiHitImage) {
       processImage(campaign.multiHitImage, multiHitImgRef)
     }
-  }, [])
+  }, [activeCampaignId])
 
   // ─── Init game state ────────────────────────────────────────────────
   const initGame = useCallback((canvas, currentLevel = 1, carryScore = 0) => {

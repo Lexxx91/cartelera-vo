@@ -107,7 +107,9 @@ CREATE POLICY "Users can send friend requests" ON amistades
 
 DROP POLICY IF EXISTS "Users can accept friend requests" ON amistades;
 CREATE POLICY "Users can accept friend requests" ON amistades
-  FOR UPDATE USING (auth.uid() = user_b AND status = 'pending');
+  FOR UPDATE
+  USING (auth.uid() = user_b AND status = 'pending')
+  WITH CHECK (auth.uid() = user_b AND status = 'accepted');
 
 DROP POLICY IF EXISTS "Users can delete their friendships" ON amistades;
 CREATE POLICY "Users can delete their friendships" ON amistades
@@ -475,6 +477,99 @@ ORDER BY gs.score DESC;
 
 -- Grant access to anon
 GRANT SELECT ON leaderboard TO anon;
+
+-- ============================================================================
+-- 12. WhatsApp Agent — Linking tokens + profile columns
+-- ============================================================================
+
+-- Columns for WhatsApp JID on perfiles
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS whatsapp_jid TEXT;
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS whatsapp_linked_at TIMESTAMPTZ;
+
+-- Tokens for WhatsApp linking flow
+CREATE TABLE IF NOT EXISTS whatsapp_link_tokens (
+  token TEXT PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  expires_at TIMESTAMPTZ,
+  used BOOLEAN DEFAULT false
+);
+
+-- RLS for link tokens
+ALTER TABLE whatsapp_link_tokens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert own tokens" ON whatsapp_link_tokens
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can read own tokens" ON whatsapp_link_tokens
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- 13. Avatar Storage — Bucket + RLS policies
+-- ============================================================================
+
+-- Create avatars bucket (public read, authenticated write)
+-- NOTE: Run this via Supabase Dashboard → Storage → New bucket → "avatars" (Public)
+
+-- Storage RLS policies
+CREATE POLICY "Users upload own avatar" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users update own avatar" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Public avatar read" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'avatars');
+
+-- ============================================================================
+-- 14. Friend acceptance RLS fix
+-- ============================================================================
+
+-- Fix: UPDATE policy needs WITH CHECK so status can change from 'pending' to 'accepted'
+DROP POLICY IF EXISTS "Users can accept friend requests" ON amistades;
+CREATE POLICY "Users can accept friend requests" ON amistades
+  FOR UPDATE
+  USING (auth.uid() = user_b AND status = 'pending')
+  WITH CHECK (auth.uid() = user_b AND status = 'accepted');
+
+-- ============================================================================
+-- 15. Perfiles SELECT visibility for social features
+-- ============================================================================
+
+-- Fix: The existing "usuario ve su perfil" policy (ALL with auth.uid() = id)
+-- only lets users see their OWN profile. Social features (friends, discover)
+-- need to read OTHER users' profiles (nombre, avatar, invite_code).
+-- This new PERMISSIVE SELECT policy allows all authenticated users to read
+-- all profiles. Combined with the existing policies via OR logic.
+CREATE POLICY "perfiles visibles para autenticados" ON perfiles
+  FOR SELECT TO authenticated USING (true);
+
+-- ============================================================================
+-- 16. Planes INSERT RLS hardening — require friendship
+-- ============================================================================
+
+-- Fix: The INSERT policy allowed creating a plan with any user.
+-- Now it requires that initiator and partner have an accepted friendship.
+DROP POLICY IF EXISTS "Participants can insert plans" ON planes;
+CREATE POLICY "Participants can insert plans" ON planes
+  FOR INSERT WITH CHECK (
+    (auth.uid() = initiator_id OR auth.uid() = partner_id)
+    AND EXISTS (
+      SELECT 1 FROM amistades a
+      WHERE a.status = 'accepted'
+      AND ((a.user_a = initiator_id AND a.user_b = partner_id)
+        OR (a.user_a = partner_id AND a.user_b = initiator_id))
+    )
+  );
+
+-- ============================================================================
+-- 17. Onboarding tracking
+-- ============================================================================
+
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS onboarding_done BOOLEAN DEFAULT false;
+-- Existing users don't need onboarding — mark as done
+UPDATE perfiles SET onboarding_done = true WHERE onboarding_done IS NULL OR onboarding_done = false;
 
 -- ============================================================================
 -- Done! Verify with: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';

@@ -29,10 +29,12 @@ export default function AddFriendSheet({ myInviteCode, onSendRequest, onClose })
   }
 
   function shareCode() {
+    const url = `https://cartelera-vo.vercel.app?code=${myInviteCode}`
     if (navigator.share) {
       navigator.share({
-        title: "Cartelera VO",
-        text: `Agregame en Cartelera VO! Mi codigo: ${myInviteCode}`,
+        title: "VOSE — Cine en VO con amigos",
+        text: `¿Vamos pal cine? 🎬 Descarga VOSE, haz swipe en la cartelera y si coincidimos en una peli se monta el plan solo. Mi codigo: ${myInviteCode}`,
+        url,
       }).catch(() => {})
     } else {
       copyCode()

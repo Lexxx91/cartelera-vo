@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import AdminPanel from './AdminPanel.jsx'
+import VocitoCard from '../VocitoCard.jsx'
 
 export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa, campaignOverrides, onSaveCampaignOverride, isAdmin, campaignsLoading, onConnectWhatsApp, onUnlinkWhatsApp, waLinking }) {
   const { canInstall, isInstalled, isIOS, isIOSChrome, promptInstall } = pwa || {}
@@ -8,6 +9,8 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   const [logoutConfirm, setLogoutConfirm] = useState(false)
   const [copied, setCopied] = useState(false)
   const [avatarLoading, setAvatarLoading] = useState(false)
+  const [avatarMsg, setAvatarMsg] = useState(null) // { type: 'success'|'error', text }
+  const [copiedSafariLink, setCopiedSafariLink] = useState(false)
   const fileInputRef = useRef(null)
 
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url
@@ -21,8 +24,19 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
     const file = e.target.files?.[0]
     if (!file || !onUploadAvatar) return
     setAvatarLoading(true)
+    setAvatarMsg(null)
     try {
-      await onUploadAvatar(file)
+      const result = await onUploadAvatar(file)
+      if (result?.error) {
+        setAvatarMsg({ type: 'error', text: result.error })
+      } else {
+        setAvatarMsg({ type: 'success', text: 'Foto actualizada ✓' })
+      }
+      // Auto-hide message after 3s
+      setTimeout(() => setAvatarMsg(null), 3000)
+    } catch (err) {
+      setAvatarMsg({ type: 'error', text: 'Error inesperado' })
+      setTimeout(() => setAvatarMsg(null), 3000)
     } finally {
       setAvatarLoading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -46,8 +60,8 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
     const url = `https://cartelera-vo.vercel.app?code=${inviteCode}`
     if (navigator.share) {
       navigator.share({
-        title: "VOSE — El cine como debe sonar",
-        text: `Unite a VOSE! Descubre que pelis en version original hay en Las Palmas y organiza planes con amigos.`,
+        title: "VOSE — Cine en VO con amigos",
+        text: `¿Vamos pal cine? 🎬 Con VOSE haces swipe en la cartelera de VO de Las Palmas y cuando coincides con un amigo se monta el plan solo. Sin audios. Sin grupos muertos.`,
         url,
       }).catch(() => {})
     } else {
@@ -109,6 +123,17 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
               )}
             </div>
           </div>
+
+          {/* Avatar upload feedback */}
+          {avatarMsg && (
+            <p style={{
+              margin:"0 0 8px",fontSize:12,fontWeight:600,textAlign:"center",
+              color: avatarMsg.type === 'error' ? '#ff453a' : '#34c759',
+              animation:"fadeIn 0.2s ease",
+            }}>
+              {avatarMsg.text}
+            </p>
+          )}
 
           {/* Display name */}
           {editingName ? (
@@ -288,7 +313,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
                   border:"1px solid rgba(255,255,255,0.08)",
                   borderRadius:20,padding:"20px 18px",
                 }}>
-                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
                     <div style={{
                       width:40,height:40,borderRadius:10,
                       background:"#000",border:"1px solid rgba(255,255,255,0.1)",
@@ -304,23 +329,44 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
                         Instalar VOSE
                       </h3>
                       <p style={{margin:"2px 0 0",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
-                        Abre en Safari para instalar
+                        En iPhone se instala desde Safari
                       </p>
                     </div>
                   </div>
-                  <div style={{
-                    background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"12px 14px",
-                    display:"flex",alignItems:"flex-start",gap:10,
-                  }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{flexShrink:0,marginTop:1}}>
-                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
-                      <line x1="12" y1="8" x2="12" y2="12" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="12" cy="15.5" r="0.75" fill="rgba(255,255,255,0.3)"/>
-                    </svg>
-                    <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>
-                      En iPhone solo se puede instalar desde <strong style={{color:"rgba(255,255,255,0.75)"}}>Safari</strong>. Abre <strong style={{color:"rgba(255,255,255,0.75)"}}>cartelera-vo.vercel.app</strong> en Safari y ve a tu perfil.
-                    </p>
-                  </div>
+                  {/* Copy link button */}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText('https://cartelera-vo.vercel.app?returning=1')
+                      setCopiedSafariLink(true)
+                      setTimeout(() => setCopiedSafariLink(false), 2000)
+                    }}
+                    style={{
+                      width:"100%",padding:"13px 0",borderRadius:14,border:"none",
+                      background: copiedSafariLink ? "rgba(52,199,89,0.15)" : "#ff3b3b",
+                      color: copiedSafariLink ? "#34c759" : "#fff",
+                      fontSize:15,fontWeight:700,
+                      cursor:"pointer",fontFamily:"inherit",
+                      display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                      marginBottom:12,
+                      transition:"all 0.3s ease",
+                      WebkitTapHighlightColor:"transparent",
+                    }}
+                  >
+                    {copiedSafariLink ? (
+                      <>✓ Enlace copiado</>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <rect x="9" y="9" width="13" height="13" rx="2" stroke="#fff" strokeWidth="2"/>
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="#fff" strokeWidth="2"/>
+                        </svg>
+                        Copiar enlace para Safari
+                      </>
+                    )}
+                  </button>
+                  <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.35)",textAlign:"center",lineHeight:1.5}}>
+                    Pega el enlace en Safari → Perfil → Sigue los pasos para instalar
+                  </p>
                 </div>
               </div>
             )
@@ -330,131 +376,13 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
           return null
         })()}
 
-        {/* WhatsApp Connection Card */}
-        {(() => {
-          const isLinked = !!profile?.whatsapp_jid
-
-          // Already linked — subtle green indicator
-          if (isLinked) {
-            return (
-              <div style={{padding:"0 20px",marginBottom:20}}>
-                <div style={{
-                  background:"rgba(37,211,102,0.06)",
-                  border:"1px solid rgba(37,211,102,0.15)",
-                  borderRadius:20,
-                  padding:"16px 18px",
-                  display:"flex",alignItems:"center",justifyContent:"space-between",
-                }}>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{
-                      width:36,height:36,borderRadius:10,
-                      background:"rgba(37,211,102,0.12)",
-                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
-                    }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#25d366"/>
-                        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="#25d366" strokeWidth="1.5" fill="none"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <span style={{fontSize:13,color:"rgba(255,255,255,0.6)",fontWeight:500}}>
-                        WhatsApp conectado
-                      </span>
-                      <span style={{fontSize:11,color:"rgba(255,255,255,0.25)",marginLeft:6}}>✓</span>
-                    </div>
-                  </div>
-                  <button onClick={onUnlinkWhatsApp} style={{
-                    background:"none",border:"none",cursor:"pointer",padding:6,
-                    color:"rgba(255,255,255,0.2)",fontSize:11,fontFamily:"inherit",
-                  }}>
-                    Desvincular
-                  </button>
-                </div>
-              </div>
-            )
-          }
-
-          // Linking in progress — waiting for user to send message
-          if (waLinking) {
-            return (
-              <div style={{padding:"0 20px",marginBottom:20}}>
-                <div style={{
-                  background:"rgba(37,211,102,0.06)",
-                  border:"1px solid rgba(37,211,102,0.2)",
-                  borderRadius:20,padding:"20px 18px",
-                  textAlign:"center",
-                }}>
-                  <div style={{
-                    width:48,height:48,borderRadius:"50%",margin:"0 auto 14px",
-                    background:"rgba(37,211,102,0.12)",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                  }}>
-                    <div style={{
-                      width:20,height:20,
-                      border:"2.5px solid rgba(37,211,102,0.3)",
-                      borderTop:"2.5px solid #25d366",
-                      borderRadius:"50%",
-                      animation:"spin 1s linear infinite",
-                    }} />
-                  </div>
-                  <p style={{margin:"0 0 6px",fontSize:15,fontWeight:600,color:"#fff"}}>
-                    Esperando mensaje...
-                  </p>
-                  <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.4)",lineHeight:1.5}}>
-                    Envia el mensaje en WhatsApp y vuelve aqui.
-                    <br/>Se vinculara automaticamente.
-                  </p>
-                </div>
-              </div>
-            )
-          }
-
-          // Not linked — show connection card
-          return (
-            <div style={{padding:"0 20px",marginBottom:20}}>
-              <div style={{
-                background:"rgba(37,211,102,0.06)",
-                border:"1px solid rgba(37,211,102,0.12)",
-                borderRadius:20,padding:"20px 18px",
-              }}>
-                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-                  <div style={{
-                    width:40,height:40,borderRadius:10,
-                    background:"rgba(37,211,102,0.12)",
-                    display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#25d366"/>
-                      <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="#25d366" strokeWidth="1.5" fill="none"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:15,color:"#fff",letterSpacing:"0.02em"}}>
-                      Tu asistente de cine
-                    </h3>
-                    <p style={{margin:"2px 0 0",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
-                      Recibe matches y planes por WhatsApp
-                    </p>
-                  </div>
-                </div>
-                <button onClick={onConnectWhatsApp} style={{
-                  width:"100%",padding:"13px 0",borderRadius:14,border:"none",
-                  background:"#25d366",color:"#fff",fontSize:15,fontWeight:700,
-                  cursor:"pointer",fontFamily:"inherit",
-                  display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-                  WebkitTapHighlightColor:"transparent",
-                  transition:"opacity 0.2s",
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#fff"/>
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="#fff" strokeWidth="1.5" fill="none"/>
-                  </svg>
-                  Conectar WhatsApp
-                </button>
-              </div>
-            </div>
-          )
-        })()}
+        {/* VOCITO — WhatsApp Assistant */}
+        <VocitoCard
+          isLinked={!!profile?.whatsapp_jid}
+          waLinking={waLinking}
+          onConnect={onConnectWhatsApp}
+          onUnlink={onUnlinkWhatsApp}
+        />
 
         {/* Credit card invite */}
         <div style={{padding:"0 20px",marginBottom:24}}>

@@ -84,14 +84,19 @@ export default function useProfile(user) {
     })()
   }, [user])
 
-  // Update avatar from Google if changed + sync email
+  // Sync email from Google (but NEVER overwrite custom avatar)
   useEffect(() => {
     if (!user || !profile || user.isDemo) return
     const updates = {}
+
+    // Only sync Google avatar if user has NO avatar at all (first login)
+    // Never overwrite a custom uploaded avatar (Supabase storage URLs)
     const googleAvatar = user.user_metadata?.avatar_url
-    if (googleAvatar && googleAvatar !== profile.avatar_url) {
+    if (googleAvatar && !profile.avatar_url) {
       updates.avatar_url = googleAvatar
     }
+
+    // Always sync email
     if (user.email && user.email !== profile.email) {
       updates.email = user.email
     }
@@ -134,18 +139,18 @@ export default function useProfile(user) {
   }
 
   async function uploadAvatar(file) {
-    if (!user || !file) return null
+    if (!user || !file) return { error: 'No user or file' }
 
     // Demo mode: local preview only
     if (user.isDemo) {
       const url = URL.createObjectURL(file)
       setProfile(p => ({ ...p, avatar_url: url }))
-      return url
+      return { url }
     }
 
     // Resize to 256×256
     const resized = await resizeImage(file)
-    if (!resized) return null
+    if (!resized) return { error: 'No se pudo redimensionar la imagen' }
 
     const filePath = `${user.id}/avatar-${Date.now()}.jpg`
 
@@ -159,7 +164,7 @@ export default function useProfile(user) {
 
     if (uploadError) {
       console.error('Avatar upload error:', uploadError)
-      return null
+      return { error: uploadError.message || 'Error al subir la imagen' }
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -167,8 +172,14 @@ export default function useProfile(user) {
       .getPublicUrl(filePath)
 
     // Update profile with new avatar URL
-    updateProfile({ avatar_url: publicUrl })
-    return publicUrl
+    const { error: updateError } = await supabase.from("perfiles").update({ avatar_url: publicUrl }).eq("id", user.id)
+    if (updateError) {
+      console.error('Avatar profile update error:', updateError)
+      return { error: updateError.message || 'Error al guardar el perfil' }
+    }
+
+    setProfile(p => ({ ...p, avatar_url: publicUrl }))
+    return { url: publicUrl }
   }
 
   // ═══════════════════════════════════════════════════

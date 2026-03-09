@@ -117,10 +117,11 @@ export default function useFriends(user) {
 
   // Accept a pending friend request
   async function acceptRequest(friendshipId) {
-    await supabase
+    const { error } = await supabase
       .from("amistades")
       .update({ status: 'accepted' })
       .eq("id", friendshipId)
+    if (error) console.error("Accept friend request error:", error)
     await fetchFriends()
   }
 

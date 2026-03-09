@@ -2,7 +2,20 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 
 export default function Login({ onDemoMode }) {
-  const [isReturningUser] = useState(() => !!localStorage.getItem('vose_has_account'))
+  const [isReturningUser] = useState(() => {
+    // Check localStorage first, then URL param (for cross-browser flow, e.g. Chrome→Safari)
+    if (localStorage.getItem('vose_has_account')) return true
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('returning')) {
+      localStorage.setItem('vose_has_account', 'true')
+      // Clean URL
+      params.delete('returning')
+      const clean = params.toString()
+      window.history.replaceState({}, '', window.location.pathname + (clean ? `?${clean}` : ''))
+      return true
+    }
+    return false
+  })
   const [inviteCode, setInviteCode] = useState('')
   const [validating, setValidating] = useState(false)
   const [codeValidated, setCodeValidated] = useState(() => !!localStorage.getItem('vose_has_account'))
