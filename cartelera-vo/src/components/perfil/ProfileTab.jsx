@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 
-export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount }) {
+export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa }) {
+  const { canInstall, isInstalled, isIOS, isIOSChrome, promptInstall } = pwa || {}
   const [editingName, setEditingName] = useState(false)
   const [displayName, setDisplayName] = useState(profile?.nombre_display || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Cinefilo")
   const [logoutConfirm, setLogoutConfirm] = useState(false)
@@ -141,6 +142,192 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
             ))}
           </div>
         </div>
+
+        {/* PWA Install Card */}
+        {(() => {
+          // Case 1: Already installed — subtle green indicator
+          if (isInstalled) {
+            return (
+              <div style={{padding:"0 20px",marginBottom:20}}>
+                <div style={{
+                  background:"rgba(52,199,89,0.06)",
+                  border:"1px solid rgba(52,199,89,0.15)",
+                  borderRadius:20,
+                  padding:"14px 18px",
+                  display:"flex",alignItems:"center",gap:10,
+                }}>
+                  <span style={{fontSize:18,lineHeight:1}}>✓</span>
+                  <span style={{fontSize:13,color:"rgba(255,255,255,0.45)",fontWeight:500}}>
+                    VOSE instalada en tu dispositivo
+                  </span>
+                </div>
+              </div>
+            )
+          }
+
+          // Case 2: Android/Chrome — native install prompt
+          if (canInstall) {
+            return (
+              <div style={{padding:"0 20px",marginBottom:20}}>
+                <div style={{
+                  background:"rgba(255,255,255,0.06)",
+                  border:"1px solid rgba(255,255,255,0.08)",
+                  borderRadius:20,padding:"20px 18px",
+                }}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                    <div style={{
+                      width:40,height:40,borderRadius:10,
+                      background:"#000",border:"1px solid rgba(255,255,255,0.1)",
+                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
+                    }}>
+                      <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:10,fontWeight:400}}>
+                        <span style={{color:"#fff"}}>VO</span>
+                        <span style={{color:"#ff3b3b"}}>SE</span>
+                      </span>
+                    </div>
+                    <div>
+                      <h3 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:16,color:"#fff",letterSpacing:"0.02em"}}>
+                        Instalar VOSE
+                      </h3>
+                      <p style={{margin:"2px 0 0",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
+                        Accede mas rapido desde tu pantalla de inicio
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={promptInstall} style={{
+                    width:"100%",padding:"13px 0",borderRadius:14,border:"none",
+                    background:"#ff3b3b",color:"#fff",fontSize:15,fontWeight:700,
+                    cursor:"pointer",fontFamily:"inherit",
+                    WebkitTapHighlightColor:"transparent",
+                    transition:"opacity 0.2s",
+                  }}>
+                    Instalar
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          // Case 3: iOS Safari — manual tutorial steps
+          if (isIOS) {
+            return (
+              <div style={{padding:"0 20px",marginBottom:20}}>
+                <div style={{
+                  background:"rgba(255,255,255,0.06)",
+                  border:"1px solid rgba(255,255,255,0.08)",
+                  borderRadius:20,padding:"20px 18px",
+                }}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+                    <div style={{
+                      width:40,height:40,borderRadius:10,
+                      background:"#000",border:"1px solid rgba(255,255,255,0.1)",
+                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
+                    }}>
+                      <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:10,fontWeight:400}}>
+                        <span style={{color:"#fff"}}>VO</span>
+                        <span style={{color:"#ff3b3b"}}>SE</span>
+                      </span>
+                    </div>
+                    <div>
+                      <h3 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:16,color:"#fff",letterSpacing:"0.02em"}}>
+                        Anadir VOSE a tu inicio
+                      </h3>
+                      <p style={{margin:"2px 0 0",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
+                        Accede mas rapido desde tu pantalla de inicio
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    {[
+                      { icon: (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="#ff3b3b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ), text: "Pulsa el boton Compartir" },
+                      { icon: (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <rect x="3" y="3" width="18" height="18" rx="2" stroke="#ff3b3b" strokeWidth="2"/>
+                          <line x1="12" y1="8" x2="12" y2="16" stroke="#ff3b3b" strokeWidth="2" strokeLinecap="round"/>
+                          <line x1="8" y1="12" x2="16" y2="12" stroke="#ff3b3b" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      ), text: "Selecciona \"Anadir a pantalla de inicio\"" },
+                      { icon: (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <polyline points="20,6 9,17 4,12" stroke="#ff3b3b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ), text: "Pulsa \"Anadir\"" },
+                    ].map((step, i) => (
+                      <div key={i} style={{
+                        display:"flex",alignItems:"center",gap:12,
+                        background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"10px 14px",
+                      }}>
+                        <div style={{
+                          width:28,height:28,borderRadius:8,
+                          background:"rgba(255,59,59,0.12)",
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          flexShrink:0,
+                        }}>
+                          {step.icon}
+                        </div>
+                        <span style={{fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.3}}>{step.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          // Case 4: iOS but NOT Safari (Chrome, Firefox, etc.) — must open in Safari
+          if (isIOSChrome) {
+            return (
+              <div style={{padding:"0 20px",marginBottom:20}}>
+                <div style={{
+                  background:"rgba(255,255,255,0.06)",
+                  border:"1px solid rgba(255,255,255,0.08)",
+                  borderRadius:20,padding:"20px 18px",
+                }}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                    <div style={{
+                      width:40,height:40,borderRadius:10,
+                      background:"#000",border:"1px solid rgba(255,255,255,0.1)",
+                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
+                    }}>
+                      <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:10,fontWeight:400}}>
+                        <span style={{color:"#fff"}}>VO</span>
+                        <span style={{color:"#ff3b3b"}}>SE</span>
+                      </span>
+                    </div>
+                    <div>
+                      <h3 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:16,color:"#fff",letterSpacing:"0.02em"}}>
+                        Instalar VOSE
+                      </h3>
+                      <p style={{margin:"2px 0 0",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
+                        Abre en Safari para instalar
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{
+                    background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"12px 14px",
+                    display:"flex",alignItems:"flex-start",gap:10,
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{flexShrink:0,marginTop:1}}>
+                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
+                      <line x1="12" y1="8" x2="12" y2="12" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="12" cy="15.5" r="0.75" fill="rgba(255,255,255,0.3)"/>
+                    </svg>
+                    <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>
+                      En iPhone solo se puede instalar desde <strong style={{color:"rgba(255,255,255,0.75)"}}>Safari</strong>. Abre <strong style={{color:"rgba(255,255,255,0.75)"}}>carteleravo.app</strong> en Safari y ve a tu perfil.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          // Case 5: Desktop — don't show anything
+          return null
+        })()}
 
         {/* Credit card invite */}
         <div style={{padding:"0 20px",marginBottom:24}}>

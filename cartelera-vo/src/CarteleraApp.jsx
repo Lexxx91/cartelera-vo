@@ -16,6 +16,8 @@ import CartelleraTab from './components/cartelera/CartelleraTab.jsx'
 import MatchPopup from './components/cartelera/MatchPopup.jsx'
 import AmigosTab from './components/amigos/AmigosTab.jsx'
 import ProfileTab from './components/perfil/ProfileTab.jsx'
+import InstallBanner from './components/InstallBanner.jsx'
+import usePWAInstall from './hooks/usePWAInstall.js'
 
 export default function CarteleraApp({ user, onLogout }) {
   const [tab, setTab] = useState("cartelera")
@@ -30,6 +32,9 @@ export default function CarteleraApp({ user, onLogout }) {
   const realVotes = useVotes(user, realFriends)
   const realPlans = usePlans(user, realFriends)
   const { movies, loading: moviesLoading, error: moviesError } = useMovies()
+
+  // PWA install detection
+  const pwa = usePWAInstall()
 
   // Demo mode: only active when using "Probar sin cuenta" (not for real Google users)
   const demo = useDemo(movies)
@@ -319,10 +324,19 @@ export default function CarteleraApp({ user, onLogout }) {
             myVotes={myVotes}
             movies={movies}
             inviteeCount={inviteeCount}
+            pwa={pwa}
           />
         )}
       </div>
 
+      <InstallBanner
+        canInstall={pwa.canInstall}
+        isIOS={pwa.isIOS}
+        isIOSChrome={pwa.isIOSChrome}
+        isInstalled={pwa.isInstalled}
+        onPromptInstall={pwa.promptInstall}
+        onGoToProfile={() => setTab("perfil")}
+      />
       <BottomNav tab={tab} onTabChange={setTab} badge={badgeCount} />
     </div>
   )

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>VOSE — Sin conexion</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .logo {
+      font-family: 'Arial Black', Impact, sans-serif;
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      margin-bottom: 28px;
+    }
+    .logo .vo { color: #fff; }
+    .logo .se { color: #ff3b3b; }
+    .icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 20px;
+      opacity: 0.25;
+    }
+    .message {
+      font-size: 18px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .hint {
+      font-size: 14px;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.4;
+      max-width: 280px;
+    }
+    .retry {
+      margin-top: 36px;
+      padding: 14px 36px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .retry:active {
+      background: rgba(255,255,255,0.12);
+    }
+  </style>
+</head>
+<body>
+  <div class="logo"><span class="vo">VO</span><span class="se">SE</span></div>
+  <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-3.03M8.53 16.11a6 6 0 016.95 0M12 20h.01" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <p class="message">Sin conexion</p>
+  <p class="hint">Comprueba tu conexion a internet e intentalo de nuevo</p>
+  <button class="retry" onclick="window.location.reload()">Reintentar</button>
+</body>
+</html>
