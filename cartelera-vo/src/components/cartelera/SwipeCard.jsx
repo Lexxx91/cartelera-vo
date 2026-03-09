@@ -178,7 +178,7 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
       {/* Bottom info */}
       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 20px 24px",pointerEvents:"none"}}>
         {/* Title */}
-        <h2 style={{margin:"0 0 8px",fontSize:26,fontWeight:900,color:"#fff",letterSpacing:"0.06em",lineHeight:1.1,fontFamily:"'Moniqa','DM Sans',sans-serif",textShadow:"0 2px 8px rgba(0,0,0,0.5)"}}>
+        <h2 style={{margin:"0 0 8px",fontSize:26,fontWeight:900,color:"#fff",letterSpacing:"0.06em",lineHeight:1.1,fontFamily:"'Archivo Black',sans-serif",textShadow:"0 2px 8px rgba(0,0,0,0.5)"}}>
           {movie.title}
         </h2>
 

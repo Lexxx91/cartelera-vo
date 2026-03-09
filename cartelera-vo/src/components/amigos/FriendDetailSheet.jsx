@@ -78,7 +78,7 @@ export default function FriendDetailSheet({
               <span style={{fontSize:26,fontWeight:700,color:"#fff"}}>{friendName.charAt(0)}</span>
             )}
           </div>
-          <p style={{margin:"0 0 4px",fontSize:20,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",color:"#fff"}}>{friendName}</p>
+          <p style={{margin:"0 0 4px",fontSize:20,fontWeight:900,fontFamily:"'Archivo Black',sans-serif",color:"#fff"}}>{friendName}</p>
           {sinceDate && (
             <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.3)"}}>Amigos desde {sinceDate}</p>
           )}
