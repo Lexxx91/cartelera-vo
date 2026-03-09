@@ -525,13 +525,14 @@ function StoryVocito({ onConnect, onSkip }) {
       {/* VOCITO avatar */}
       <div style={{
         width: 80, height: 80, borderRadius: 26,
-        background: "linear-gradient(135deg, #25d366, #128C7E)",
+        background: "#e8e4df",
         display: "flex", alignItems: "center", justifyContent: "center",
         margin: "0 auto 16px",
         border: "3px solid rgba(255,255,255,0.15)",
+        overflow: "hidden",
         animation: "scaleBounce 0.5s ease-out 0.2s both, float 3s ease-in-out 0.7s infinite",
       }}>
-        <span style={{ fontSize: 38 }}>🤖</span>
+        <img src="/vocito-avatar.png" alt="VOCITO" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </div>
 
       <h1 style={{

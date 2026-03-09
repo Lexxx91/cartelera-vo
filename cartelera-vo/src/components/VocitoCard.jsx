@@ -3,11 +3,16 @@ export default function VocitoCard({ isLinked, waLinking, onConnect, onUnlink, c
   const VocitoAvatar = ({ size = 48 }) => (
     <div style={{
       width: size, height: size, borderRadius: size * 0.33,
-      background: "linear-gradient(135deg, #25d366, #128C7E)",
+      background: "#e8e4df",
       display: "flex", alignItems: "center", justifyContent: "center",
       flexShrink: 0, border: "2px solid rgba(255,255,255,0.1)",
+      overflow: "hidden",
     }}>
-      <span style={{ fontSize: size * 0.46, lineHeight: 1 }}>🤖</span>
+      <img
+        src="/vocito-avatar.png"
+        alt="VOCITO"
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
     </div>
   )
 
