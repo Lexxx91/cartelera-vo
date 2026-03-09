@@ -328,6 +328,15 @@ export default function useDemo(movies) {
     }))
   }
 
+  // Save user's rating for a demo plan
+  function saveDemoRating(planId, userId, rating) {
+    setDemoPlans(prev => prev.map(p => {
+      if (p.id !== planId) return p
+      const ratings = { ...(p.ratings || {}), [userId]: { rating, date: new Date().toISOString().split('T')[0] } }
+      return { ...p, ratings, updated_at: new Date().toISOString() }
+    }))
+  }
+
   // Reject all → no_match
   function rejectAll(planId) {
     setDemoPlans(prev => prev.map(p => {
@@ -396,6 +405,7 @@ export default function useDemo(movies) {
     pickSession,
     rejectAll,
     savePayer,
+    saveDemoRating,
     getDemoSuggestions,
     getDemoFriendsOfFriend,
     getDemoMoviesInCommon,

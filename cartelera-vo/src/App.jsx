@@ -14,6 +14,17 @@ const DEMO_USER = {
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
   const [demoMode, setDemoMode] = useState(false)
+  const [pendingPlanJoin, setPendingPlanJoin] = useState(null)
+
+  // Read ?plan=PLAN_ID from URL for deep linking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const planId = params.get('plan')
+    if (planId) {
+      setPendingPlanJoin(planId)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   useEffect(() => {
     // Get initial session
@@ -29,7 +40,7 @@ export default function App() {
 
   // Demo mode — skip auth entirely
   if (demoMode) {
-    return <CarteleraApp user={DEMO_USER} onLogout={() => setDemoMode(false)} />
+    return <CarteleraApp user={DEMO_USER} onLogout={() => setDemoMode(false)} pendingPlanJoin={pendingPlanJoin} onClearPendingPlan={() => setPendingPlanJoin(null)} />
   }
 
   // Loading
@@ -53,5 +64,5 @@ export default function App() {
 
   if (!session) return <Login onDemoMode={() => setDemoMode(true)} />
 
-  return <CarteleraApp user={session.user} onLogout={() => supabase.auth.signOut()} />
+  return <CarteleraApp user={session.user} onLogout={() => supabase.auth.signOut()} pendingPlanJoin={pendingPlanJoin} onClearPendingPlan={() => setPendingPlanJoin(null)} />
 }

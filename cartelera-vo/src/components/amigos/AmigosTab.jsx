@@ -52,7 +52,6 @@ function addToCalendar(movieTitle, session, inviteeEmails) {
     location: session.cinema || '',
     details: `Plan de cine VOSE — ${movieTitle}\n${session.cinema || ''}`,
   })
-  // Add invitees if available
   const emails = (inviteeEmails || []).filter(Boolean)
   if (emails.length > 0) {
     params.set('add', emails.join(','))
@@ -77,6 +76,9 @@ export default function AmigosTab({
   onDiscoverUsers,
   onMarkWatched,
   onSavePayer,
+  onShowShareCard,
+  onSaveRating,
+  profile,
 }) {
   const [activePlan, setActivePlan] = useState(null)
   const [selectedFriend, setSelectedFriend] = useState(null)
@@ -84,9 +86,6 @@ export default function AmigosTab({
   const [discoverSentTo, setDiscoverSentTo] = useState(new Set())
   const [discoverSending, setDiscoverSending] = useState(null)
   const [discoverSearch, setDiscoverSearch] = useState('')
-  const [ratingPlan, setRatingPlan] = useState(null) // planId being rated
-  const [ratingValue, setRatingValue] = useState(0)
-  const [markedWatched, setMarkedWatched] = useState(new Set())
 
   // Load discoverable users on mount
   useEffect(() => {
@@ -108,6 +107,18 @@ export default function AmigosTab({
   // Helper: get poster from movies list
   const getPoster = (title) => (movies || []).find(m => m.title === title)?.poster
 
+  // Share invite link
+  function handleShareInvite() {
+    const code = profile?.invite_code || ''
+    const url = `https://cartelera-vo.vercel.app?code=${code}`
+    const text = `Yo uso VOSE para organizar planes de cine con amigos. Unete con mi codigo: ${url}`
+    if (navigator.share) {
+      navigator.share({ title: 'VOSE', text }).catch(() => {})
+    } else {
+      navigator.clipboard?.writeText(text)
+    }
+  }
+
   // PlanSheet overlay
   if (activePlan) {
     const plan = plans.find(p => p.id === activePlan)
@@ -119,6 +130,7 @@ export default function AmigosTab({
             plan={plan}
             myState={getMyState(plan)}
             partnerName={partnerName}
+            posterUrl={getPoster(plan.movie_title)}
             user={user}
             friends={friends}
             onRespondYes={() => onRespondYes(plan.id)}
@@ -128,6 +140,8 @@ export default function AmigosTab({
             onRejectAll={() => onRejectAll(plan.id)}
             onClose={() => setActivePlan(null)}
             onSavePayer={(payerName) => onSavePayer && onSavePayer(plan.id, payerName)}
+            onShare={() => onShowShareCard && onShowShareCard(plan.id)}
+            onSaveRating={onSaveRating ? (rating) => onSaveRating(plan.id, rating) : null}
           />
         </div>
       )
@@ -174,17 +188,32 @@ export default function AmigosTab({
       {/* Scrollable content */}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"0 0 100px"}}>
 
-        {/* No friends onboarding — landing style */}
+        {/* No friends onboarding — fun empty state */}
         {!hasAnyFriends && (
           <div style={{textAlign:"center",padding:"48px 24px 32px",animation:"fadeIn 0.6s ease"}}>
-            <h2 style={{margin:"0 0 6px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:36,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
-              <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent",display:"block"}}>AGREGA</span>
-              <span style={{color:"#ff3b3b",display:"block"}}>AMIGOS</span>
+            <p style={{fontSize:48,margin:"0 0 12px"}}>🍿</p>
+            <h2 style={{margin:"0 0 6px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:32,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
+              <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent",display:"block"}}>SIN AMIGOS</span>
+              <span style={{color:"#ff3b3b",display:"block"}}>NO HAY SWIPE</span>
             </h2>
-            <p style={{margin:"12px auto 24px",fontSize:13,color:"rgba(255,255,255,0.4)",lineHeight:1.6,maxWidth:240}}>
-              Descubre que pelis quieren ver y organiza planes juntos
+            <p style={{margin:"14px auto 24px",fontSize:13,color:"rgba(255,255,255,0.4)",lineHeight:1.6,maxWidth:260}}>
+              Invita a tus amigos a salir de la cueva. El cine mola mas en grupo.
             </p>
-            <p style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>Busca personas abajo para empezar ↓</p>
+            <button onClick={handleShareInvite} style={{
+              padding:"14px 28px",borderRadius:14,
+              background:"#ff3b3b",border:"none",
+              color:"#000",fontSize:13,fontWeight:800,
+              fontFamily:"'Archivo Black',sans-serif",
+              cursor:"pointer",textTransform:"uppercase",
+              letterSpacing:"0.02em",
+              display:"inline-flex",alignItems:"center",gap:8,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Invitar amigos
+            </button>
+            <p style={{fontSize:12,color:"rgba(255,255,255,0.2)",marginTop:16}}>O busca personas abajo ↓</p>
           </div>
         )}
 
@@ -279,89 +308,107 @@ export default function AmigosTab({
 
                 {confirmedPlans.map(plan => {
                   const poster = getPoster(plan.movie_title)
-                  const isRating = ratingPlan === plan.id
-                  const alreadyMarked = markedWatched.has(plan.id)
+                  const hasRatings = plan.ratings && Object.keys(plan.ratings).length > 0
                   return (
-                    <div key={plan.id} style={{background:"rgba(255,59,59,0.05)",border:"1px solid rgba(255,59,59,0.18)",borderRadius:14,padding:12,marginBottom:10,transition:"all 0.2s"}}>
-                      <div style={{display:"flex",gap:14,alignItems:"center",cursor:"pointer"}} onClick={() => setActivePlan(plan.id)}>
-                        {/* Poster thumbnail */}
-                        <div style={{width:56,height:84,borderRadius:8,overflow:"hidden",flexShrink:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
-                          {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
+                    <div key={plan.id} onClick={() => setActivePlan(plan.id)} style={{
+                      position: "relative", borderRadius: 18, overflow: "hidden",
+                      marginBottom: 14, cursor: "pointer", height: 160,
+                      border: "1px solid rgba(255,59,59,0.2)",
+                      transition: "all 0.2s",
+                    }}>
+                      {/* Background poster */}
+                      {poster && (
+                        <img src={poster} alt="" style={{
+                          position: "absolute", inset: 0,
+                          width: "100%", height: "100%",
+                          objectFit: "cover", opacity: 0.4,
+                        }} />
+                      )}
+                      {/* Gradient */}
+                      <div style={{
+                        position: "absolute", inset: 0,
+                        background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.3) 100%)",
+                      }} />
+                      {/* Content overlay */}
+                      <div style={{
+                        position: "relative", zIndex: 1,
+                        height: "100%", padding: "14px 16px",
+                        display: "flex", flexDirection: "column",
+                        justifyContent: "space-between",
+                      }}>
+                        {/* Top row: status badge + countdown */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, color: "#ff3b3b",
+                            background: "rgba(255,59,59,0.15)", padding: "3px 10px",
+                            borderRadius: 8, backdropFilter: "blur(8px)",
+                          }}>
+                            CONFIRMADO ✓
+                          </span>
+                          <CountdownBadge session={plan.chosen_session} />
                         </div>
-                        {/* Info */}
-                        <div style={{flex:1,minWidth:0}}>
-                          <p style={{margin:"0 0 4px",fontSize:15,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
+                        {/* Bottom: title + session + avatars */}
+                        <div>
+                          <p style={{
+                            margin: "0 0 4px", fontSize: 18, fontWeight: 400,
+                            fontFamily: "'Archivo Black',sans-serif", color: "#fff",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                          }}>
+                            {plan.movie_title}
+                          </p>
                           {plan.chosen_session && (
-                            <p style={{margin:"0 0 6px",fontSize:12,color:"rgba(255,255,255,0.45)",lineHeight:1.4}}>
-                              {plan.chosen_session.day || plan.chosen_session.date} · {plan.chosen_session.time}<br/>
-                              {plan.chosen_session.cinema}
+                            <p style={{ margin: "0 0 8px", fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
+                              {plan.chosen_session.day || plan.chosen_session.date} · {plan.chosen_session.time} · {(plan.chosen_session.cinema || "").split(" ").slice(0,3).join(" ")}
                             </p>
                           )}
-                          <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-                            {(plan.participants || []).map((pid) => {
+                          {/* Overlapping participant avatars */}
+                          <div style={{ display: "flex", alignItems: "center" }}>
+                            {(plan.participants || []).slice(0, 4).map((pid, i) => {
                               const f = friends.find(fr => fr.id === pid)
                               const pp = (plan.participantProfiles || []).find(p => p.id === pid)
-                              const name = pid === user?.id ? "Tu" : (f?.nombre_display || f?.nombre || pp?.nombre_display || pp?.nombre || "Amigo")
-                              return <span key={pid} style={{fontSize:10,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:6}}>{name}</span>
+                              const isMe = pid === user?.id
+                              const avatar = isMe ? user?.user_metadata?.avatar_url : (f?.avatar_url || pp?.avatar_url)
+                              const name = isMe ? "Tu" : (f?.nombre_display || f?.nombre || pp?.nombre_display || pp?.nombre || "?")
+                              return (
+                                <div key={pid} style={{
+                                  width: 28, height: 28, borderRadius: "50%",
+                                  overflow: "hidden", marginLeft: i > 0 ? -8 : 0,
+                                  border: "2px solid rgba(0,0,0,0.6)",
+                                  background: "linear-gradient(135deg, #1a1a1a, #111)",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  zIndex: 4 - i,
+                                }}>
+                                  {avatar ? (
+                                    <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  ) : (
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{name.charAt(0)}</span>
+                                  )}
+                                </div>
+                              )
                             })}
-                            <span style={{fontSize:10,fontWeight:700,color:"#ff3b3b",marginLeft:4}}>✓ Confirmado</span>
-                            <CountdownBadge session={plan.chosen_session} />
+                            <span style={{ marginLeft: 8, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                              {(plan.participants || []).map(pid => {
+                                if (pid === user?.id) return "Tu"
+                                const f = friends.find(fr => fr.id === pid)
+                                return (f?.nombre_display || f?.nombre || "Amigo").split(" ")[0]
+                              }).join(", ")}
+                            </span>
+                            {/* Average rating if available */}
+                            {hasRatings && (() => {
+                              const vals = Object.values(plan.ratings).map(r => r.rating)
+                              const avg = Math.round(vals.reduce((a,b) => a+b, 0) / vals.length)
+                              return (
+                                <div style={{ marginLeft: "auto", display: "flex", gap: 1 }}>
+                                  {[1,2,3,4,5].map(s => (
+                                    <span key={s} style={{ fontSize: 10, color: s <= avg ? "#ffd60a" : "rgba(255,255,255,0.1)" }}>★</span>
+                                  ))}
+                                </div>
+                              )
+                            })()}
                           </div>
                         </div>
                       </div>
-                      {/* Action buttons row */}
-                      <div style={{display:"flex",gap:8,marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-                        <button onClick={() => addToCalendar(plan.movie_title, plan.chosen_session, [plan.partner?.email])} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:"rgba(255,59,59,0.08)",border:"1px solid rgba(255,59,59,0.18)",color:"#ff3b3b",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#ff3b3b" strokeWidth="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#ff3b3b" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                          Calendario
-                        </button>
-                        {alreadyMarked ? (
-                          <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:"rgba(255,59,59,0.08)",border:"1px solid rgba(255,59,59,0.18)",color:"#ff3b3b",fontSize:11,fontWeight:600}}>
-                            <span>★</span> Vista
-                          </div>
-                        ) : (
-                          <button onClick={() => { setRatingPlan(isRating ? null : plan.id); setRatingValue(0) }} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:isRating?"rgba(255,59,59,0.12)":"rgba(255,255,255,0.04)",border:`1px solid ${isRating?"rgba(255,59,59,0.25)":"rgba(255,255,255,0.08)"}`,color:isRating?"#ff3b3b":"rgba(255,255,255,0.5)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.5"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5"/></svg>
-                            Vista
-                          </button>
-                        )}
-                      </div>
-                      {/* Star rating panel */}
-                      {isRating && !alreadyMarked && (
-                        <div style={{marginTop:10,padding:"12px 0 2px",borderTop:"1px solid rgba(255,255,255,0.06)",textAlign:"center"}}>
-                          <p style={{margin:"0 0 10px",fontSize:12,color:"rgba(255,255,255,0.4)",fontWeight:500}}>Que te parecio?</p>
-                          <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12}}>
-                            {[1,2,3,4,5].map(star => (
-                              <button key={star} onClick={() => setRatingValue(star)} style={{background:"none",border:"none",cursor:"pointer",padding:4,fontSize:28,color:star<=ratingValue?"#ffd60a":"rgba(255,255,255,0.12)",transition:"all 0.15s",transform:star<=ratingValue?"scale(1.15)":"scale(1)"}}>
-                                ★
-                              </button>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (ratingValue > 0 && onMarkWatched) {
-                                const planContext = {
-                                  cinema: plan.chosen_session?.cinema,
-                                  time: plan.chosen_session?.time,
-                                  with: (plan.participants || [])
-                                    .filter(pid => pid !== user?.id)
-                                    .map(pid => {
-                                      const f = friends.find(fr => fr.id === pid)
-                                      return f?.nombre_display || f?.nombre || "Amigo"
-                                    }),
-                                }
-                                onMarkWatched(plan.movie_title, ratingValue, planContext)
-                                setMarkedWatched(prev => new Set([...prev, plan.id]))
-                                setRatingPlan(null)
-                              }
-                            }}
-                            disabled={ratingValue === 0}
-                            style={{padding:"8px 24px",borderRadius:10,background:ratingValue>0?"rgba(255,59,59,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${ratingValue>0?"rgba(255,59,59,0.3)":"rgba(255,255,255,0.08)"}`,color:ratingValue>0?"#ff3b3b":"rgba(255,255,255,0.2)",fontSize:13,fontWeight:700,cursor:ratingValue>0?"pointer":"default",fontFamily:"inherit",transition:"all 0.2s"}}
-                          >
-                            Guardar
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )
                 })}
@@ -472,15 +519,26 @@ export default function AmigosTab({
               </div>
             )}
 
-            {/* Empty state — landing style */}
+            {/* Empty state with plans — fun version */}
             {activePlans.length === 0 && confirmedPlans.length === 0 && openPlans.length === 0 && friendSuggestions.length === 0 && (
               <div style={{textAlign:"center",padding:"40px 24px",animation:"fadeIn 0.6s ease"}}>
-                <h3 style={{margin:"0 0 10px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:28,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
-                  <span style={{WebkitTextStroke:"1.2px #fff",color:"transparent",display:"block"}}>SIN</span>
-                  <span style={{color:"#ff3b3b",display:"block"}}>PLANES</span>
+                <p style={{fontSize:48,margin:"0 0 12px"}}>🎬</p>
+                <h3 style={{margin:"0 0 6px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:26,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
+                  <span style={{WebkitTextStroke:"1.2px #fff",color:"transparent",display:"block"}}>ESTO ESTA</span>
+                  <span style={{color:"#ff3b3b",display:"block"}}>MUY VACIO</span>
                 </h3>
-                <p style={{color:"rgba(255,255,255,0.3)",fontSize:13,margin:"0 0 20px",lineHeight:1.6,maxWidth:240,marginLeft:"auto",marginRight:"auto"}}>Desliza pelis a la derecha para descubrir coincidencias con tus amigos</p>
-                <button onClick={onSwitchToCartelera} style={{padding:"12px 28px",borderRadius:14,background:"#ff3b3b",border:"none",color:"#000",fontSize:13,fontWeight:800,fontFamily:"'Archivo Black',sans-serif",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.02em"}}>Ir a la cartelera</button>
+                <p style={{color:"rgba(255,255,255,0.35)",fontSize:13,margin:"14px auto 20px",lineHeight:1.6,maxWidth:260}}>
+                  Haz swipe en la cartelera para descubrir pelis que quieres ver. Cuando coincidas con un amigo, se crea un plan automaticamente.
+                </p>
+                <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                  <button onClick={onSwitchToCartelera} style={{padding:"12px 24px",borderRadius:14,background:"#ff3b3b",border:"none",color:"#000",fontSize:13,fontWeight:800,fontFamily:"'Archivo Black',sans-serif",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.02em"}}>Ir a la cartelera</button>
+                  <button onClick={handleShareInvite} style={{padding:"12px 24px",borderRadius:14,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.6)",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Invitar amigos
+                  </button>
+                </div>
               </div>
             )}
 

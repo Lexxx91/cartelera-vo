@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase.js'
 
 // Hooks
@@ -8,6 +8,7 @@ import useVotes from './hooks/useVotes.js'
 import usePlans from './hooks/usePlans.js'
 import useMovies from './hooks/useMovies.js'
 import useDemo, { DEMO_FRIEND } from './hooks/useDemo.js'
+import usePWAInstall from './hooks/usePWAInstall.js'
 
 // Components
 import Toast from './components/Toast.jsx'
@@ -16,15 +17,17 @@ import CartelleraTab from './components/cartelera/CartelleraTab.jsx'
 import MatchPopup from './components/cartelera/MatchPopup.jsx'
 import AmigosTab from './components/amigos/AmigosTab.jsx'
 import ProfileTab from './components/perfil/ProfileTab.jsx'
+import PlanConfirmedOverlay from './components/amigos/PlanConfirmedOverlay.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
-import usePWAInstall from './hooks/usePWAInstall.js'
 
-export default function CarteleraApp({ user, onLogout }) {
+export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearPendingPlan }) {
   const [tab, setTab] = useState("cartelera")
   const [toasts, setToasts] = useState([])
   const [matchPopup, setMatchPopup] = useState(null)
   const [openPlans, setOpenPlans] = useState([])
   const [localVotes, setLocalVotes] = useState({}) // local votes for demo mode
+  const [confirmedOverlay, setConfirmedOverlay] = useState(null)
+  const prevPlansRef = useRef([])
 
   // Initialize hooks
   const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount } = useProfile(user)
@@ -75,6 +78,39 @@ export default function CarteleraApp({ user, onLogout }) {
     const interval = setInterval(fetchOpen, 5000)
     return () => clearInterval(interval)
   }, [isDemoMode, realFriends, realPlans.getOpenPlans])
+
+  // Auto-detect plan confirmation → show overlay with roulette + share card
+  useEffect(() => {
+    const prevPlans = prevPlansRef.current
+    if (prevPlans.length === 0 && plans.length > 0) {
+      prevPlansRef.current = plans.map(p => ({ id: p.id, status: getMyState(p) }))
+      return
+    }
+
+    for (const plan of plans) {
+      const state = getMyState(plan)
+      if (state === 'confirmed') {
+        const prev = prevPlans.find(pp => pp.id === plan.id)
+        if (!prev || prev.status !== 'confirmed') {
+          // Plan just transitioned to confirmed (or appeared new as confirmed)!
+          const poster = (movies || []).find(m => m.title === plan.movie_title)?.poster
+          setConfirmedOverlay({ plan, posterUrl: poster })
+          setTab("amigos")
+          break
+        }
+      }
+    }
+
+    prevPlansRef.current = plans.map(p => ({ id: p.id, status: getMyState(p) }))
+  }, [plans, getMyState, movies])
+
+  // Auto-join plan from deep link
+  useEffect(() => {
+    if (!pendingPlanJoin) return
+    handleJoinPlan(pendingPlanJoin)
+    onClearPendingPlan?.()
+    setTab("amigos")
+  }, [pendingPlanJoin])
 
   // Handle swipe vote
   async function handleSwipe(movie, direction) {
@@ -224,6 +260,23 @@ export default function CarteleraApp({ user, onLogout }) {
     else realPlans.savePayer(planId, payerName)
   }
 
+  // Save rating for a plan
+  function handleSaveRating(planId, rating) {
+    if (isDemoMode) {
+      demo.saveDemoRating(planId, user?.id || "demo-local-user", rating)
+    } else {
+      realPlans.saveRating(planId, rating)
+    }
+  }
+
+  // Show the share card overlay for a confirmed plan
+  function handleShowShareCard(planId) {
+    const plan = plans.find(p => p.id === planId)
+    if (!plan) return
+    const poster = (movies || []).find(m => m.title === plan.movie_title)?.poster
+    setConfirmedOverlay({ plan, posterUrl: poster })
+  }
+
   // Friend suggestions
   const friendSuggestions = isDemoMode ? demo.getDemoSuggestions(localVotes) : realVotes.getFriendSuggestions()
 
@@ -244,7 +297,7 @@ export default function CarteleraApp({ user, onLogout }) {
   }
 
   return (
-    <div style={{minHeight:"100vh",background:"#000",fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif",color:"#fff",overflowX:"hidden",maxWidth:430,margin:"0 auto",position:"relative"}}>
+    <div style={{minHeight:"100dvh",background:"#000",fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif",color:"#fff",overflowX:"hidden",maxWidth:430,margin:"0 auto",position:"relative"}}>
       <style>{`
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -269,8 +322,18 @@ export default function CarteleraApp({ user, onLogout }) {
         />
       )}
 
+      {/* Plan confirmed overlay — shareable invitation card */}
+      {confirmedOverlay && (
+        <PlanConfirmedOverlay
+          plan={confirmedOverlay.plan}
+          posterUrl={confirmedOverlay.posterUrl}
+          user={user}
+          onClose={() => setConfirmedOverlay(null)}
+        />
+      )}
+
       {/* Tab content */}
-      <div style={{paddingBottom:70,height:"100vh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+      <div style={{paddingBottom:"calc(70px + env(safe-area-inset-bottom, 0px))",height:"100dvh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
         {tab === "cartelera" && (
           <CartelleraTab
             movies={movies}
@@ -285,6 +348,7 @@ export default function CarteleraApp({ user, onLogout }) {
         {tab === "amigos" && (
           <AmigosTab
             user={user}
+            profile={profile}
             friends={friends}
             pendingIn={pendingIn}
             pendingOut={pendingOut}
@@ -312,6 +376,8 @@ export default function CarteleraApp({ user, onLogout }) {
             onDiscoverUsers={isDemoMode ? demo.getDemoDiscoverUsers : discoverUsers}
             onMarkWatched={handleMarkWatched}
             onSavePayer={handleSavePayer}
+            onSaveRating={handleSaveRating}
+            onShowShareCard={handleShowShareCard}
           />
         )}
         {tab === "perfil" && (

@@ -8,12 +8,9 @@ const PRE_SPIN_COPY = [
 ]
 
 const POST_SPIN_COPY = [
-  "¡Te toca comprar, chacho!",
-  "Ni pa'l cine te libras",
-  "¡A soltar la pasta!",
-  "Compras tu hoy, mano",
-  "¡Rascate el bolsillo!",
-  "El destino ha hablado",
+  "Te toca comprar las entradas",
+  "Hoy compras tu las entradas",
+  "Las entradas corren de tu cuenta",
 ]
 
 const SEGMENT_COLORS = ['#ff3b3b', '#1a1a1a', '#cc2f2f', '#111111']
@@ -220,55 +217,39 @@ export default function RouletteWheel({ participants, onDone }) {
           <p style={{
             fontSize: 16,
             color: 'rgba(255,255,255,0.6)',
-            margin: '0 0 28px',
+            margin: '0 0 6px',
             fontWeight: 600,
             animation: 'fadeIn 0.5s ease both 0.6s',
           }}>
             {postCopy}
           </p>
+          <p style={{
+            fontSize: 12,
+            color: 'rgba(255,255,255,0.3)',
+            margin: '0 0 28px',
+            animation: 'fadeIn 0.5s ease both 0.8s',
+          }}>
+            Tranqui, cada uno te pagara su entrada
+          </p>
 
-          {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            <button
-              onClick={() => {
-                setFinished(false)
-                setSpinning(false)
-                setWinnerIndex(null)
-                setRotation(0)
-              }}
-              style={{
-                padding: '13px 24px',
-                borderRadius: 100,
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.6)',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                animation: 'fadeIn 0.5s ease both 0.8s',
-              }}
-            >
-              Girar otra vez
-            </button>
-            <button
-              onClick={() => onDone && onDone(winner.name)}
-              style={{
-                padding: '13px 24px',
-                borderRadius: 100,
-                background: '#ff3b3b',
-                border: 'none',
-                color: '#000',
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                animation: 'fadeIn 0.5s ease both 0.8s',
-              }}
-            >
-              Hecho
-            </button>
-          </div>
+          {/* Action button */}
+          <button
+            onClick={() => onDone && onDone(winner.name)}
+            style={{
+              padding: '13px 36px',
+              borderRadius: 100,
+              background: '#ff3b3b',
+              border: 'none',
+              color: '#000',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              animation: 'fadeIn 0.5s ease both 1s',
+            }}
+          >
+            Hecho
+          </button>
         </div>
       )}
 

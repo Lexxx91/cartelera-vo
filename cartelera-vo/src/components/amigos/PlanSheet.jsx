@@ -19,11 +19,8 @@ function addToCalendar(movieTitle, session, inviteeEmails) {
     location: session.cinema || '',
     details: `Plan de cine VOSE — ${movieTitle}\n${session.cinema || ''}`,
   })
-  // Add invitees if available
   const emails = (inviteeEmails || []).filter(Boolean)
-  if (emails.length > 0) {
-    params.set('add', emails.join(','))
-  }
+  if (emails.length > 0) params.set('add', emails.join(','))
   window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
@@ -44,7 +41,45 @@ function formatCountdown(session) {
   return `${mins}m`
 }
 
-export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends, onSavePayer }) {
+// Check if plan date has passed (+2h buffer for movie duration)
+function isPlanPast(session) {
+  if (!session?.date || !session?.time) return false
+  const [year, month, day] = session.date.split("-").map(Number)
+  const [hours, minutes] = (session.time || "00:00").split(":").map(Number)
+  if (!year) return false
+  const target = new Date(year, month - 1, day, (hours || 0) + 2, minutes || 0)
+  return Date.now() > target.getTime()
+}
+
+// Inline star rating picker
+function RatingPicker({ onRate }) {
+  const [val, setVal] = useState(0)
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 4 }}>
+      {[1,2,3,4,5].map(s => (
+        <button key={s} onClick={() => setVal(s)} style={{
+          background: "none", border: "none", cursor: "pointer", padding: 2,
+          fontSize: 22, color: s <= val ? "#ffd60a" : "rgba(255,255,255,0.12)",
+          transition: "all 0.15s", transform: s <= val ? "scale(1.1)" : "scale(1)",
+        }}>
+          ★
+        </button>
+      ))}
+      {val > 0 && (
+        <button onClick={() => onRate(val)} style={{
+          marginLeft: 8, padding: "5px 16px", borderRadius: 8,
+          background: "rgba(255,59,59,0.15)", border: "1px solid rgba(255,59,59,0.3)",
+          color: "#ff3b3b", fontSize: 12, fontWeight: 700,
+          cursor: "pointer", fontFamily: "inherit",
+        }}>
+          OK
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends, onSavePayer, posterUrl, onShare, onSaveRating }) {
   const [allSessions, setAllSessions] = useState([])
   const [myAvail, setMyAvail] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
@@ -75,24 +110,146 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
   }
   function isMarked(s) { return !!myAvail.find(x => sKey(x) === sKey(s)) }
 
-  // Get partner's availability
   const amIInitiator = plan.amIInitiator
   const theirAvail = amIInitiator ? (plan.partner_availability || []) : (plan.initiator_availability || [])
-
   const proposed = plan.proposed_session
   const chosen = plan.chosen_session
 
-  return (
-    <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-      <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.72)"}} />
-      <div ref={sheetRef} style={{position:"relative",background:"#111",borderRadius:"24px 24px 0 0",border:"1px solid rgba(255,255,255,0.08)",padding:"0 20px 44px",maxHeight:"85vh",overflowY:"auto",marginBottom:0}}>
-        <div style={{width:36,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"12px auto 20px"}} />
+  // Build participant list (used by avatars section + roulette)
+  const allParticipants = []
+  if (user) {
+    allParticipants.push({
+      id: user?.id,
+      name: user?.user_metadata?.full_name || 'Tu',
+      avatar_url: user?.user_metadata?.avatar_url || null,
+    })
+  }
+  ;(plan.participants || []).forEach(pid => {
+    if (pid === user?.id) return
+    const friend = (friends || []).find(f => f.id === pid)
+    if (friend) {
+      allParticipants.push({ id: pid, name: friend.nombre_display || friend.nombre, avatar_url: friend.avatar_url })
+    } else if (plan.partner && pid === plan.partner?.id) {
+      allParticipants.push({ id: pid, name: plan.partner.nombre_display || plan.partner.nombre || partnerName, avatar_url: plan.partner.avatar_url })
+    } else {
+      allParticipants.push({ id: pid, name: 'Participante', avatar_url: null })
+    }
+  })
+  if (allParticipants.length < 2 && plan.partner) {
+    allParticipants.push({ id: plan.partner.id, name: plan.partner.nombre_display || plan.partner.nombre || partnerName, avatar_url: plan.partner.avatar_url })
+  }
 
-        {/* Header */}
-        <div style={{marginBottom:20,paddingBottom:16,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
-          <p style={{fontSize:20,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",color:"#fff",margin:"0 0 4px"}}>{plan.movie_title}</p>
-          <p style={{fontSize:12,color:"rgba(255,255,255,0.35)",margin:0}}>Plan con {partnerName}</p>
+  // Partner names for subtitle
+  const otherNames = allParticipants.filter(p => p.id !== user?.id).map(p => p.name.split(" ")[0]).join(", ")
+
+  const past = chosen ? isPlanPast(chosen) : false
+  const countdown = chosen ? formatCountdown(chosen) : null
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "#000",
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+      animation: "fadeIn 0.3s ease",
+    }}>
+      {/* Poster background */}
+      {posterUrl && (
+        <img src={posterUrl} alt="" style={{
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%",
+          objectFit: "cover",
+          opacity: past ? 0.2 : 0.45,
+          filter: past ? "grayscale(0.6)" : "none",
+          transition: "all 0.3s",
+        }} />
+      )}
+
+      {/* Gradient overlay */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.88) 30%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.25) 100%)",
+      }} />
+
+      {/* Top bar */}
+      <div style={{
+        position: "relative", zIndex: 2,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "16px 20px",
+        flexShrink: 0,
+      }}>
+        <button onClick={onClose} style={{
+          width: 38, height: 38, borderRadius: "50%",
+          background: "rgba(255,255,255,0.1)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          color: "#fff", fontSize: 18, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+        {/* VOSE badge */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <span style={{ fontFamily: "'Archivo Black',sans-serif", fontSize: 16, color: "#fff", letterSpacing: "0.02em" }}>VO</span>
+          <span style={{ fontFamily: "'Archivo Black',sans-serif", fontSize: 16, color: "rgba(255,255,255,0.35)" }}>SE</span>
         </div>
+      </div>
+
+      {/* Scrollable content — pushed to bottom */}
+      <div ref={sheetRef} style={{
+        position: "relative", zIndex: 2,
+        flex: 1, overflowY: "auto",
+        display: "flex", flexDirection: "column",
+        justifyContent: "flex-end",
+        padding: "0 24px 44px",
+      }}>
+        {/* Movie title + subtitle */}
+        <h1 style={{
+          margin: "0 0 4px",
+          fontSize: 26, fontWeight: 400,
+          fontFamily: "'Archivo Black', sans-serif",
+          color: "#fff",
+          textTransform: "uppercase",
+          letterSpacing: "0.02em",
+          textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+          lineHeight: 1.1,
+        }}>
+          {plan.movie_title}
+        </h1>
+        <p style={{ margin: "0 0 20px", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+          Plan con {otherNames}
+        </p>
+
+        {/* Participant avatars */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+          {allParticipants.map((p, i) => (
+            <div key={p.id || i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: "50%",
+                overflow: "hidden",
+                background: "linear-gradient(135deg, #1a1a1a, #111)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: "2px solid rgba(255,255,255,0.15)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+              }}>
+                {p.avatar_url ? (
+                  <img src={p.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>
+                    {p.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)" }}>
+                {p.id === user?.id ? "Tu" : p.name.split(" ")[0]}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* === STATE-SPECIFIC CONTENT === */}
 
         {/* PROPOSED */}
         {myState === "proposed" && proposed && (
@@ -189,57 +346,166 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
         )}
 
         {/* CONFIRMED */}
-        {myState === "confirmed" && chosen && !showRoulette && (() => {
-          const countdown = formatCountdown(chosen)
-          return (
-            <div style={{background:"rgba(255,59,59,0.07)",border:"1px solid rgba(255,59,59,0.2)",borderRadius:16,padding:18,textAlign:"center"}}>
-              <p style={{fontSize:11,fontWeight:600,color:"#ff3b3b",letterSpacing:"0.08em",textTransform:"uppercase",margin:"0 0 10px"}}>Plan confirmado ✓</p>
-              <p style={{fontSize:26,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{chosen.day || chosen.date} · {chosen.time}</p>
-              <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:"0 0 4px"}}>📍 {chosen.cinema}</p>
+        {myState === "confirmed" && chosen && !showRoulette && (
+          <div style={{ animation: "fadeIn 0.4s ease" }}>
+            {/* Session info card */}
+            <div style={{
+              background: "rgba(255,59,59,0.08)",
+              border: "1px solid rgba(255,59,59,0.2)",
+              borderRadius: 18, padding: 20,
+              marginBottom: 16,
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#ff3b3b", letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 12px", textAlign: "center" }}>
+                {past ? "Plan completado" : "Plan confirmado"} ✓
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: countdown ? 14 : 0, justifyContent: "center" }}>
+                <span style={{ fontSize: 22 }}>📅</span>
+                <div style={{ textAlign: "left" }}>
+                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>
+                    {chosen.day || chosen.date} · {chosen.time}
+                  </p>
+                  <p style={{ margin: "2px 0 0", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+                    📍 {chosen.cinema}
+                  </p>
+                </div>
+              </div>
+
+              {/* Countdown */}
               {countdown && (
-                <p style={{fontSize:13,fontWeight:700,color:"#ff3b3b",margin:"0 0 16px"}}>⏱ Quedan {countdown}</p>
-              )}
-              {!countdown && <div style={{height:12}} />}
-              {plan.payer_name && (
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:14}}>
-                  <span style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.6)"}}>🎰 Compra las entradas: <strong style={{color:"#ff3b3b"}}>{plan.payer_name}</strong></span>
-                  <button onClick={() => setShowRoulette(true)} style={{padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.35)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cambiar</button>
+                <div style={{
+                  background: "rgba(255,59,59,0.12)", borderRadius: 14,
+                  padding: "12px 16px", textAlign: "center", marginTop: 4,
+                }}>
+                  <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: "rgba(255,59,59,0.6)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    Quedan
+                  </p>
+                  <p style={{ margin: "2px 0 0", fontSize: 28, fontWeight: 400, fontFamily: "'Archivo Black',sans-serif", color: "#ff3b3b" }}>
+                    {countdown}
+                  </p>
                 </div>
               )}
-              <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-                <button onClick={() => addToCalendar(plan.movie_title, chosen, [plan.partner?.email, user?.email].filter(Boolean))} style={{padding:"13px 24px",borderRadius:100,background:"#ff3b3b",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+
+              {/* Payer */}
+              {plan.payer_name && (
+                <p style={{ margin: "14px 0 0", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>
+                  🎰 Compra las entradas: <strong style={{ color: "#ff3b3b" }}>{plan.payer_name}</strong>
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            {!past && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <button onClick={() => addToCalendar(plan.movie_title, chosen, [plan.partner?.email, user?.email].filter(Boolean))} style={{
+                  width: "100%", padding: "14px 24px", borderRadius: 14,
+                  background: "#ff3b3b", border: "none",
+                  color: "#000", fontSize: 14, fontWeight: 700,
+                  cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#000" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#000" strokeWidth="2" strokeLinecap="round"/></svg>
                   Añadir al calendario
                 </button>
+                {onShare && (
+                  <button onClick={onShare} style={{
+                    width: "100%", padding: "14px 24px", borderRadius: 14,
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "inherit",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Compartir plan
+                  </button>
+                )}
                 {!plan.payer_name && (
-                  <button onClick={() => setShowRoulette(true)} style={{padding:"13px 24px",borderRadius:100,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.6)",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                  <button onClick={() => setShowRoulette(true)} style={{
+                    width: "100%", padding: "14px 24px", borderRadius: 14,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "inherit",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}>
                     🎰 ¿Quien compra las entradas?
                   </button>
                 )}
               </div>
-            </div>
-          )
-        })()}
+            )}
 
-        {/* ROULETTE */}
-        {myState === "confirmed" && showRoulette && (() => {
-          const participants = []
-          // Add current user
-          if (user) {
-            participants.push({ name: user?.user_metadata?.full_name || 'Tú', avatar_url: user?.user_metadata?.avatar_url })
-          }
-          // Add plan partner
-          const partner = plan.partner
-          if (partner) {
-            participants.push({ name: partner.nombre_display || partner.nombre || partnerName, avatar_url: partner.avatar_url })
-          } else {
-            participants.push({ name: partnerName, avatar_url: null })
-          }
-          return <RouletteWheel participants={participants} onDone={(winnerName) => {
-            if (onSavePayer) onSavePayer(winnerName)
-            setShowRoulette(false)
-          }} />
-        })()}
+            {/* POST-MOVIE: Ratings section */}
+            {past && (
+              <div style={{ animation: "fadeIn 0.4s ease" }}>
+                <p style={{
+                  margin: "0 0 16px", fontSize: 11, fontWeight: 700,
+                  color: "rgba(255,255,255,0.3)", textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}>
+                  Valoraciones
+                </p>
+
+                {allParticipants.map((p, i) => {
+                  const pid = p.id
+                  const rating = plan.ratings?.[pid]
+                  const isMe = pid === user?.id
+                  const hasRated = !!rating
+
+                  return (
+                    <div key={pid || i} style={{
+                      display: "flex", alignItems: "center", gap: 14,
+                      padding: "14px 0",
+                      borderBottom: i < allParticipants.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                    }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: "50%",
+                        overflow: "hidden", background: "linear-gradient(135deg,#1a1a1a,#111)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        border: "2px solid rgba(255,255,255,0.1)", flexShrink: 0,
+                      }}>
+                        {p.avatar_url ? (
+                          <img src={p.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>{p.name.charAt(0)}</span>
+                        )}
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#fff" }}>
+                          {isMe ? "Tu" : p.name}
+                        </p>
+                        {hasRated ? (
+                          <div style={{ display: "flex", gap: 2, marginTop: 3 }}>
+                            {[1,2,3,4,5].map(s => (
+                              <span key={s} style={{ fontSize: 15, color: s <= rating.rating ? "#ffd60a" : "rgba(255,255,255,0.1)" }}>★</span>
+                            ))}
+                          </div>
+                        ) : isMe && onSaveRating ? (
+                          <RatingPicker onRate={(val) => onSaveRating(val)} />
+                        ) : (
+                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontStyle: "italic" }}>Pendiente</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ROULETTE — with ALL participants */}
+        {myState === "confirmed" && showRoulette && (
+          <RouletteWheel
+            participants={allParticipants.map(p => ({ name: p.name, avatar_url: p.avatar_url }))}
+            onDone={(winnerName) => {
+              if (onSavePayer) onSavePayer(winnerName)
+              setShowRoulette(false)
+            }}
+          />
+        )}
 
         {/* NO_MATCH */}
         {myState === "no_match" && (

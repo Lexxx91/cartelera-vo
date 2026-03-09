@@ -276,6 +276,15 @@ export default function usePlans(user, friends) {
     await fetchPlans()
   }
 
+  // Save user's rating for a plan
+  async function saveRating(planId, rating) {
+    const plan = plans.find(p => p.id === planId)
+    if (!plan || !user) return
+    const ratings = { ...(plan.ratings || {}), [user.id]: { rating, date: new Date().toISOString().split('T')[0] } }
+    await supabase.from("planes").update({ ratings }).eq("id", planId)
+    await fetchPlans()
+  }
+
   // Get confirmed plans from friends that I can join
   async function getOpenPlans() {
     if (!user || !friends || friends.length === 0) return []
@@ -315,6 +324,7 @@ export default function usePlans(user, friends) {
     leavePlan,
     getOpenPlans,
     savePayer,
+    saveRating,
     refresh: fetchPlans,
   }
 }
