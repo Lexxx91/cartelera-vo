@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import PlanSheet from './PlanSheet.jsx'
 import FriendDetailSheet from './FriendDetailSheet.jsx'
 
-// Open Google Calendar with pre-filled event
-function addToCalendar(movieTitle, session) {
+// Open Google Calendar with pre-filled event + invitees
+function addToCalendar(movieTitle, session, inviteeEmails) {
   if (!session) return
   const [year, month, day] = (session.date || "").split("-").map(Number)
   const [hours, minutes] = (session.time || "").split(":").map(Number)
@@ -19,6 +19,11 @@ function addToCalendar(movieTitle, session) {
     location: session.cinema || '',
     details: `Plan de cine VOSE — ${movieTitle}\n${session.cinema || ''}`,
   })
+  // Add invitees if available
+  const emails = (inviteeEmails || []).filter(Boolean)
+  if (emails.length > 0) {
+    params.set('add', emails.join(','))
+  }
   window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
@@ -246,7 +251,7 @@ export default function AmigosTab({
                   const alreadyMarked = markedWatched.has(plan.id)
                   return (
                     <div key={plan.id} style={{background:"rgba(255,59,59,0.05)",border:"1px solid rgba(255,59,59,0.18)",borderRadius:14,padding:12,marginBottom:10,transition:"all 0.2s"}}>
-                      <div style={{display:"flex",gap:14,alignItems:"center",cursor:"pointer"}} onClick={() => addToCalendar(plan.movie_title, plan.chosen_session)}>
+                      <div style={{display:"flex",gap:14,alignItems:"center",cursor:"pointer"}} onClick={() => setActivePlan(plan.id)}>
                         {/* Poster thumbnail */}
                         <div style={{width:56,height:84,borderRadius:8,overflow:"hidden",flexShrink:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
                           {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
@@ -273,7 +278,7 @@ export default function AmigosTab({
                       </div>
                       {/* Action buttons row */}
                       <div style={{display:"flex",gap:8,marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-                        <button onClick={() => addToCalendar(plan.movie_title, plan.chosen_session)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:"rgba(255,59,59,0.08)",border:"1px solid rgba(255,59,59,0.18)",color:"#ff3b3b",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                        <button onClick={() => addToCalendar(plan.movie_title, plan.chosen_session, [plan.partner?.email])} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 0",borderRadius:10,background:"rgba(255,59,59,0.08)",border:"1px solid rgba(255,59,59,0.18)",color:"#ff3b3b",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#ff3b3b" strokeWidth="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#ff3b3b" strokeWidth="1.5" strokeLinecap="round"/></svg>
                           Calendario
                         </button>

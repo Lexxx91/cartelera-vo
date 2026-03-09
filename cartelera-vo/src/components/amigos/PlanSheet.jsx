@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { getAllSessionsForMovie, sKey } from '../../utils.js'
 import RouletteWheel from './RouletteWheel.jsx'
 
-// Open Google Calendar with pre-filled event
-function addToCalendar(movieTitle, session) {
+// Open Google Calendar with pre-filled event + invitees
+function addToCalendar(movieTitle, session, inviteeEmails) {
   if (!session) return
   const [year, month, day] = (session.date || "").split("-").map(Number)
   const [hours, minutes] = (session.time || "").split(":").map(Number)
@@ -19,6 +19,11 @@ function addToCalendar(movieTitle, session) {
     location: session.cinema || '',
     details: `Plan de cine VOSE — ${movieTitle}\n${session.cinema || ''}`,
   })
+  // Add invitees if available
+  const emails = (inviteeEmails || []).filter(Boolean)
+  if (emails.length > 0) {
+    params.set('add', emails.join(','))
+  }
   window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
@@ -165,7 +170,7 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
             <p style={{fontSize:26,fontWeight:800,color:"#fff",margin:"0 0 4px"}}>{chosen.day || chosen.date} · {chosen.time}</p>
             <p style={{fontSize:13,color:"rgba(255,255,255,0.4)",margin:"0 0 16px"}}>📍 {chosen.cinema}</p>
             <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={() => addToCalendar(plan.movie_title, chosen)} style={{padding:"13px 24px",borderRadius:100,background:"#ff3b3b",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              <button onClick={() => addToCalendar(plan.movie_title, chosen, [plan.partner?.email, user?.email].filter(Boolean))} style={{padding:"13px 24px",borderRadius:100,background:"#ff3b3b",border:"none",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#000" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#000" strokeWidth="2" strokeLinecap="round"/></svg>
                 Añadir al calendario
               </button>

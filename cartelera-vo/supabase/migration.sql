@@ -7,6 +7,7 @@
 ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS invite_code text UNIQUE;
 ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS avatar_url text;
 ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS nombre_display text;
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS email text;
 
 -- Generate invite codes for existing rows (Canarian words)
 -- See generate_invite_code() function below for the word list

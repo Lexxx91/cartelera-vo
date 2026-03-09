@@ -40,6 +40,7 @@ export default function useProfile(user) {
           nombre: user.user_metadata?.full_name || user.email,
           nombre_display: user.user_metadata?.full_name || user.email?.split("@")[0] || "Cinefilo",
           avatar_url: user.user_metadata?.avatar_url || null,
+          email: user.email || null,
           watched: [],
           alerts: [],
         }
@@ -66,13 +67,20 @@ export default function useProfile(user) {
     })()
   }, [user])
 
-  // Update avatar from Google if changed
+  // Update avatar from Google if changed + sync email
   useEffect(() => {
     if (!user || !profile || user.isDemo) return
+    const updates = {}
     const googleAvatar = user.user_metadata?.avatar_url
     if (googleAvatar && googleAvatar !== profile.avatar_url) {
-      supabase.from("perfiles").update({ avatar_url: googleAvatar }).eq("id", user.id)
-      setProfile(p => ({ ...p, avatar_url: googleAvatar }))
+      updates.avatar_url = googleAvatar
+    }
+    if (user.email && user.email !== profile.email) {
+      updates.email = user.email
+    }
+    if (Object.keys(updates).length > 0) {
+      supabase.from("perfiles").update(updates).eq("id", user.id)
+      setProfile(p => ({ ...p, ...updates }))
     }
   }, [user, profile?.id])
 
