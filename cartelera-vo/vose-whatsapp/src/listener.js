@@ -10,7 +10,9 @@
 import { handleOnboarding } from './handlers/onboarding.js'
 import { sendText } from './messaging.js'
 
-const TOKEN_REGEX = /^vose-([a-zA-Z0-9]+)$/i
+// Match vose-TOKEN anywhere in the message (not just exact match)
+// Supports both plain "vose-abc123" and branded "...Mi codigo: vose-abc123"
+const TOKEN_REGEX = /vose-([a-zA-Z0-9]+)/i
 
 export function setupListener(sock) {
   sock.ev.on('messages.upsert', async ({ messages }) => {
