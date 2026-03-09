@@ -260,7 +260,7 @@ export default function AmigosTab({
       {/* ═══════════════════════════════════════════ */}
       {/* ZONA A: PLANES (top, scrollable)            */}
       {/* ═══════════════════════════════════════════ */}
-      <div style={{flexShrink:0,maxHeight:"55vh",overflowY:"auto",overflowX:"hidden",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+      <div style={{flexShrink:0,maxHeight:"55vh",overflowY:"auto",overflowX:"hidden",paddingBottom:12}}>
 
         {/* Header */}
         <div style={{padding:"18px 20px 14px",flexShrink:0}}>
@@ -527,8 +527,10 @@ export default function AmigosTab({
       {/* ═══════════════════════════════════════════ */}
       <div style={{
         display:"flex", padding:"0", gap:0,
+        borderTop:"1px solid rgba(255,255,255,0.06)",
         borderBottom:"1px solid rgba(255,255,255,0.06)",
         flexShrink:0, background:"rgba(0,0,0,0.3)",
+        marginTop:4,
       }}>
         {[
           { id: "amigos", label: "Amigos", count: friends.length },
