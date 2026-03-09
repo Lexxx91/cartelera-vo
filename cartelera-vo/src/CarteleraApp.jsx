@@ -31,12 +31,9 @@ export default function CarteleraApp({ user, onLogout }) {
   const realPlans = usePlans(user, realFriends)
   const { movies, loading: moviesLoading, error: moviesError } = useMovies()
 
-  // Demo mode: active when no real friends
-  const hasRealFriends = realFriends.length > 0
+  // Demo mode: only active when using "Probar sin cuenta" (not for real Google users)
   const demo = useDemo(movies)
-
-  // Unified interface: demo or real
-  const isDemoMode = !hasRealFriends
+  const isDemoMode = user?.isDemo === true
   const friends = isDemoMode ? [DEMO_FRIEND] : realFriends
   const myVotes = isDemoMode ? localVotes : realVotes.myVotes
   const friendVotes = isDemoMode ? demo.getDemoFriendVotes() : realVotes.friendVotes

@@ -15,6 +15,22 @@ export function getDayDates() {
   })
 }
 
+// Parse duration from scraper format ("2h 07min min", "122 min", "95", etc.)
+function parseDuration(raw) {
+  if (!raw) return null
+  const str = String(raw).trim()
+  // Try "Xh YYmin" format (e.g. "2h 07min min", "1h 36min min")
+  const hm = str.match(/(\d+)h\s*(\d+)/)
+  if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2])
+  // Try pure number or "NNN min"
+  const num = str.match(/(\d{2,})/)
+  if (num) {
+    const val = parseInt(num[1])
+    if (val >= 30 && val <= 400) return val
+  }
+  return null
+}
+
 // Fetch movies from Supabase cartelera table for a specific cinema and date
 export async function fetchMoviesFromSupabase(cinema, date) {
   const dateStr = date.toISOString().split("T")[0]
@@ -29,7 +45,7 @@ export async function fetchMoviesFromSupabase(cinema, date) {
     title: r.title,
     originalTitle: r.original_title || r.title,
     genre: r.genre || "",
-    duration: r.duration ? parseInt(r.duration) : null,
+    duration: parseDuration(r.duration),
     rating: r.rating_media ? String(r.rating_media) : null,
     synopsis: r.synopsis || "",
     showtimes: Array.isArray(r.showtimes) ? r.showtimes : [],

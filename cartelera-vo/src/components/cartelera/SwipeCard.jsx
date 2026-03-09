@@ -68,15 +68,14 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
   }
 
   const voters = friendVoters || []
-  const trailerUrl = movie.trailerUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent((movie.originalTitle || movie.title) + " official trailer")}`
 
-  // Extract YouTube video ID for embedding
+  // Extract YouTube video ID for embedding (only works with real TMDB trailer URLs)
   function getYouTubeId(url) {
     if (!url) return null
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
     return match ? match[1] : null
   }
-  const videoId = getYouTubeId(trailerUrl)
+  const videoId = movie.trailerUrl ? getYouTubeId(movie.trailerUrl) : null
 
   return (
     <div
@@ -206,20 +205,18 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
           )}
         </div>
 
-        {/* Trailer button */}
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => {
-            e.stopPropagation()
-            if (videoId) {
+        {/* Trailer button — only show when TMDB provides a real trailer URL */}
+        {videoId && (
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => {
+              e.stopPropagation()
               setShowTrailer(true)
-            } else {
-              window.open(trailerUrl, '_blank')
-            }
-          }}
-          style={{pointerEvents:"auto",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"8px 16px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:7,backdropFilter:"blur(8px)"}}>
-          <span style={{fontSize:15}}>▶</span> Trailer VOSE
-        </button>
+            }}
+            style={{pointerEvents:"auto",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"8px 16px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:7,backdropFilter:"blur(8px)"}}>
+            <span style={{fontSize:15}}>▶</span> Trailer VOSE
+          </button>
+        )}
       </div>
 
       {/* ── In-app Trailer Overlay (portaled to body) ── */}

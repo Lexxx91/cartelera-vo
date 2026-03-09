@@ -35,15 +35,6 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
       {/* Header — centered vertically in the space above cards */}
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,minHeight:0}}>
         <h1 style={{margin:0,fontSize:56,fontWeight:400,letterSpacing:"0.02em",fontFamily:"'Archivo Black',sans-serif",color:"#fff",textAlign:"center",textTransform:"uppercase"}}>VO<span style={{color:"#ff3b3b"}}>SE</span></h1>
-        <div style={{
-          background:"rgba(255,255,255,0.06)",
-          border:"1px solid rgba(255,255,255,0.08)",
-          borderRadius:20,padding:"5px 16px",
-          display:"inline-flex",alignItems:"center",gap:6,
-        }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1118 0z" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"/><circle cx="12" cy="10" r="3" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"/></svg>
-          <span style={{fontSize:12,fontWeight:500,color:"rgba(255,255,255,0.5)",letterSpacing:"0.01em"}}>Las Palmas de Gran Canaria</span>
-        </div>
       </div>
 
       {/* Main content */}
