@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import PlanSheet from './PlanSheet.jsx'
 import FriendDetailSheet from './FriendDetailSheet.jsx'
 import FriendRequestSheet from './FriendRequestSheet.jsx'
-import VocitoCard from '../VocitoCard.jsx'
 
 // Countdown helper: returns "Xd Xh" or "Xh Xm" or "Ahora!" text
 function useCountdown(session) {
@@ -514,12 +513,6 @@ export default function AmigosTab({
           </div>
         )}
 
-        {/* VOCITO compact card — show when WhatsApp not linked */}
-        {!whatsappLinked && onConnectWhatsApp && (
-          <div style={{padding:"0 20px",marginBottom:12}}>
-            <VocitoCard compact isLinked={false} waLinking={waLinking} onConnect={onConnectWhatsApp} />
-          </div>
-        )}
       </div>
 
       {/* ═══════════════════════════════════════════ */}

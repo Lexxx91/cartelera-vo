@@ -21,6 +21,7 @@ import ProfileTab from './components/perfil/ProfileTab.jsx'
 import PlanConfirmedOverlay from './components/amigos/PlanConfirmedOverlay.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
 import OnboardingStories from './components/onboarding/OnboardingStories.jsx'
+import VocitoSwipeSheet from './components/cartelera/VocitoSwipeSheet.jsx'
 
 export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearPendingPlan }) {
   const [tab, setTab] = useState("cartelera")
@@ -30,6 +31,8 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [localVotes, setLocalVotes] = useState({}) // local votes for demo mode
   const [confirmedOverlay, setConfirmedOverlay] = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showVocitoSheet, setShowVocitoSheet] = useState(false)
+  const [vocitoSheetPending, setVocitoSheetPending] = useState(false)
 
   // Initialize hooks
   const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking } = useProfile(user)
@@ -101,6 +104,22 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     }
   }, [profile, isDemoMode])
 
+  // VOCITO sheet: wait for matchPopup to close before showing
+  useEffect(() => {
+    if (vocitoSheetPending && !matchPopup) {
+      const t = setTimeout(() => {
+        setShowVocitoSheet(true)
+        setVocitoSheetPending(false)
+      }, 800)
+      return () => clearTimeout(t)
+    }
+  }, [vocitoSheetPending, matchPopup])
+
+  // Auto-dismiss VOCITO sheet if WA gets connected
+  useEffect(() => {
+    if (profile?.whatsapp_jid && showVocitoSheet) setShowVocitoSheet(false)
+  }, [profile?.whatsapp_jid, showVocitoSheet])
+
   function handleOnboardingComplete() {
     setShowOnboarding(false)
     localStorage.setItem('vose_onboarding_done', 'true')
@@ -133,6 +152,14 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
         if (result && result.length > 0) {
           setMatchPopup({ movie, matchedFriends: result })
         }
+      }
+    }
+
+    // Trigger VOCITO sheet after first swipe (if WA not connected)
+    if (!profile?.whatsapp_jid && !isDemoMode) {
+      if (!localStorage.getItem('vose_vocito_sheet_shown')) {
+        localStorage.setItem('vose_vocito_sheet_shown', 'true')
+        setVocitoSheetPending(true)
       }
     }
   }
@@ -336,6 +363,17 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
           user={user}
           inviteCode={profile?.invite_code}
           onClose={() => setConfirmedOverlay(null)}
+        />
+      )}
+
+      {/* VOCITO "NO TE ENTERAS" sheet — after first swipe without WA */}
+      {showVocitoSheet && (
+        <VocitoSwipeSheet
+          onConnect={() => {
+            setShowVocitoSheet(false)
+            generateWhatsAppToken()
+          }}
+          onDismiss={() => setShowVocitoSheet(false)}
         />
       )}
 
