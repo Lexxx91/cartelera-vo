@@ -268,7 +268,7 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
               }}
             >
               <iframe
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`}
                 title={`Trailer - ${movie.title}`}
                 style={{width:"100%",height:"100%",border:"none"}}
                 allow="autoplay; encrypted-media; picture-in-picture"

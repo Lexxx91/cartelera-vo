@@ -126,25 +126,28 @@ export default function AmigosTab({
         />
       )}
 
-      {/* Header */}
-      <div style={{padding:"18px 20px 14px",flexShrink:0}}>
-        <h1 style={{margin:0,fontSize:22,fontWeight:400,color:"#fff",fontFamily:"'Archivo Black',sans-serif",letterSpacing:"0.02em",textTransform:"uppercase"}}>Amigos & Planes</h1>
+      {/* Header — landing style */}
+      <div style={{padding:"18px 20px 10px",flexShrink:0}}>
+        <h1 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:28,lineHeight:0.95,letterSpacing:"-0.01em",textTransform:"uppercase"}}>
+          <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent"}}>AMIGOS &</span>{' '}
+          <span style={{color:"#ff3b3b",WebkitTextStroke:"none"}}>PLANES</span>
+        </h1>
       </div>
 
       {/* Scrollable content */}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"0 0 100px"}}>
 
-        {/* No friends onboarding */}
+        {/* No friends onboarding — landing style */}
         {!hasAnyFriends && (
-          <div style={{textAlign:"center",padding:"60px 20px 32px"}}>
-            <div style={{width:72,height:72,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",margin:"0 auto 16px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 7a4 4 0 110 8 4 4 0 010-8z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-            <h2 style={{margin:"0 0 8px",fontSize:22,fontWeight:300,fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.12em"}}>Agrega amigos</h2>
-            <p style={{margin:"0 0 24px",fontSize:14,color:"rgba(255,255,255,0.4)",lineHeight:1.6,maxWidth:260,marginLeft:"auto",marginRight:"auto"}}>
+          <div style={{textAlign:"center",padding:"48px 24px 32px",animation:"fadeIn 0.6s ease"}}>
+            <h2 style={{margin:"0 0 6px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:36,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
+              <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent",display:"block"}}>AGREGA</span>
+              <span style={{color:"#ff3b3b",display:"block"}}>AMIGOS</span>
+            </h2>
+            <p style={{margin:"12px auto 24px",fontSize:13,color:"rgba(255,255,255,0.4)",lineHeight:1.6,maxWidth:240}}>
               Descubre que pelis quieren ver y organiza planes juntos
             </p>
-            <p style={{fontSize:13,color:"rgba(255,255,255,0.25)"}}>Busca personas abajo para empezar</p>
+            <p style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>Busca personas abajo para empezar ↓</p>
           </div>
         )}
 
@@ -213,7 +216,7 @@ export default function AmigosTab({
             {/* Pending outgoing — show where my sent invitations are */}
             {pendingOut.length > 0 && (
               <div style={{padding:"0 20px",marginBottom:16}}>
-                <p style={{margin:"0 0 8px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Enviadas</p>
+                <p style={{margin:"0 0 8px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Enviadas</p>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {pendingOut.map(req => (
                     <div key={req.friendshipId} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"5px 12px 5px 5px"}}>
@@ -235,7 +238,7 @@ export default function AmigosTab({
             {/* SECTION: Planes (confirmed + joinable) */}
             {(confirmedPlans.length > 0 || openPlans.length > 0) && (
               <div style={{padding:"0 20px",marginBottom:20}}>
-                <p style={{margin:"0 0 10px",fontSize:11,fontWeight:700,color:"rgba(255,59,59,0.6)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Planes</p>
+                <p style={{margin:"0 0 12px",fontSize:13,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#ff3b3b",textTransform:"uppercase",letterSpacing:"0.06em"}}>Planes</p>
 
                 {confirmedPlans.map(plan => {
                   const poster = getPoster(plan.movie_title)
@@ -250,7 +253,7 @@ export default function AmigosTab({
                         </div>
                         {/* Info */}
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{margin:"0 0 4px",fontSize:15,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
+                          <p style={{margin:"0 0 4px",fontSize:15,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
                           {plan.chosen_session && (
                             <p style={{margin:"0 0 6px",fontSize:12,color:"rgba(255,255,255,0.45)",lineHeight:1.4}}>
                               {plan.chosen_session.day || plan.chosen_session.date} · {plan.chosen_session.time}<br/>
@@ -323,7 +326,7 @@ export default function AmigosTab({
                         {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
-                        <p style={{margin:"0 0 4px",fontSize:15,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
+                        <p style={{margin:"0 0 4px",fontSize:15,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
                         {plan.chosen_session && (
                           <p style={{margin:"0 0 6px",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
                             {plan.chosen_session.day || plan.chosen_session.date} · {plan.chosen_session.time}
@@ -347,7 +350,7 @@ export default function AmigosTab({
             {/* SECTION: Coincidis (active negotiations) */}
             {activePlans.length > 0 && (
               <div style={{padding:"0 20px",marginBottom:20}}>
-                <p style={{margin:"0 0 10px",fontSize:11,fontWeight:700,color:"rgba(255,59,59,0.7)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Coincidis</p>
+                <p style={{margin:"0 0 12px",fontSize:13,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#ff3b3b",textTransform:"uppercase",letterSpacing:"0.06em"}}>Coincidis</p>
                 {activePlans.map(plan => {
                   const state = getMyState(plan)
                   const partnerName = plan.partner?.nombre_display || plan.partner?.nombre || "Amigo"
@@ -361,7 +364,7 @@ export default function AmigosTab({
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                          <p style={{margin:"0 0 4px",fontSize:15,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{plan.movie_title}</p>
+                          <p style={{margin:"0 0 4px",fontSize:15,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{plan.movie_title}</p>
                           <span style={{fontSize:10,fontWeight:700,color:stateColors[state]||"#fff",background:"rgba(255,255,255,0.06)",borderRadius:8,padding:"3px 8px",flexShrink:0,whiteSpace:"nowrap"}}>
                             {stateLabels[state] || state}
                           </span>
@@ -382,7 +385,7 @@ export default function AmigosTab({
             {/* SECTION: Quieren ver — horizontal poster scroll */}
             {friendSuggestions.length > 0 && (
               <div style={{marginBottom:20}}>
-                <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Quieren ver</p>
+                <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:13,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Quieren ver</p>
                 <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
                   {friendSuggestions.map(({ movieTitle, voters }) => {
                     const poster = getPoster(movieTitle)
@@ -395,7 +398,7 @@ export default function AmigosTab({
                           <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%)"}} />
                           {/* Movie title overlay */}
                           <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"8px 10px"}}>
-                            <p style={{margin:0,fontSize:12,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",color:"#fff",lineHeight:1.2,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{movieTitle}</p>
+                            <p style={{margin:0,fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",lineHeight:1.2,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{movieTitle}</p>
                           </div>
                           {/* Friend avatars — top right */}
                           <div style={{position:"absolute",top:8,right:8,display:"flex"}}>
@@ -421,13 +424,15 @@ export default function AmigosTab({
               </div>
             )}
 
-            {/* Empty state — when no activity */}
+            {/* Empty state — landing style */}
             {activePlans.length === 0 && confirmedPlans.length === 0 && openPlans.length === 0 && friendSuggestions.length === 0 && (
-              <div style={{textAlign:"center",padding:"40px 20px"}}>
-                <div style={{fontSize:36,marginBottom:12}}>🎟️</div>
-                <p style={{color:"rgba(255,255,255,0.45)",fontSize:15,fontWeight:900,fontFamily:"'Moniqa','DM Sans',sans-serif",margin:"0 0 6px"}}>Sin actividad aun</p>
-                <p style={{color:"rgba(255,255,255,0.25)",fontSize:13,margin:"0 0 20px",lineHeight:1.6}}>Desliza peliculas a la derecha para descubrir coincidencias con tus amigos</p>
-                <button onClick={onSwitchToCartelera} style={{padding:"12px 28px",borderRadius:14,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ir a la cartelera</button>
+              <div style={{textAlign:"center",padding:"40px 24px",animation:"fadeIn 0.6s ease"}}>
+                <h3 style={{margin:"0 0 10px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:28,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
+                  <span style={{WebkitTextStroke:"1.2px #fff",color:"transparent",display:"block"}}>SIN</span>
+                  <span style={{color:"#ff3b3b",display:"block"}}>PLANES</span>
+                </h3>
+                <p style={{color:"rgba(255,255,255,0.3)",fontSize:13,margin:"0 0 20px",lineHeight:1.6,maxWidth:240,marginLeft:"auto",marginRight:"auto"}}>Desliza pelis a la derecha para descubrir coincidencias con tus amigos</p>
+                <button onClick={onSwitchToCartelera} style={{padding:"12px 28px",borderRadius:14,background:"#ff3b3b",border:"none",color:"#000",fontSize:13,fontWeight:800,fontFamily:"'Archivo Black',sans-serif",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.02em"}}>Ir a la cartelera</button>
               </div>
             )}
 
@@ -437,7 +442,7 @@ export default function AmigosTab({
         {/* SECTION: Discover people — social feed (always visible) */}
         {discoverPeople.length > 0 && (
           <div id="discover-section" style={{padding:"0 20px",marginBottom:20}}>
-            <p style={{margin:"0 0 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Personas en VOSE</p>
+            <p style={{margin:"0 0 12px",fontSize:13,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Personas en VO<span style={{color:"#ff3b3b"}}>SE</span></p>
 
             {/* Search input */}
             <div style={{position:"relative",marginBottom:12}}>

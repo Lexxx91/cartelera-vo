@@ -82,18 +82,22 @@ export default function MatchPopup({ movie, matchedFriends, user, onSelectSessio
         </div>
 
         {/* Match text */}
-        <p style={{
-          margin:"0 0 6px",fontSize:11,fontWeight:700,color:"rgba(255,59,59,0.8)",
-          textTransform:"uppercase",letterSpacing:"0.15em",
-        }}>Coincidencia</p>
-
         <h2 style={{
-          margin:"0 0 6px",fontSize:24,fontWeight:900,color:"#fff",
-          textAlign:"center",fontFamily:"'Moniqa','DM Sans',sans-serif",
-          letterSpacing:"0.06em",
+          margin:"0 0 8px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,
+          fontSize:28,lineHeight:0.95,textTransform:"uppercase",letterSpacing:"-0.02em",
+          textAlign:"center",
+        }}>
+          <span style={{WebkitTextStroke:"1.2px #fff",color:"transparent",display:"block"}}>ÑIOS, VAMOS</span>
+          <span style={{color:"#ff3b3b",display:"block"}}>PAL CINE</span>
+        </h2>
+
+        <h3 style={{
+          margin:"0 0 6px",fontSize:20,fontWeight:400,color:"#fff",
+          textAlign:"center",fontFamily:"'Archivo Black',sans-serif",
+          letterSpacing:"0.02em",textTransform:"uppercase",
         }}>
           {movie.title}
-        </h2>
+        </h3>
 
         <p style={{margin:"0 0 24px",fontSize:14,color:"rgba(255,255,255,0.45)",textAlign:"center"}}>
           {myName} y {friendName} quieren verla
@@ -128,7 +132,7 @@ export default function MatchPopup({ movie, matchedFriends, user, onSelectSessio
               fontFamily:"inherit",border:"none",
               marginBottom:10,
             }}>
-              Perfecto ✓
+              Me cuadra y me sabe ✓
             </button>
 
             {/* Ver todas las sesiones */}

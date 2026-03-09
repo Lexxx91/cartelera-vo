@@ -55,9 +55,11 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)",overflow:"hidden"}}>
-      {/* Header */}
-      <div style={{padding:"18px 20px 14px",flexShrink:0}}>
-        <h1 style={{margin:0,fontSize:22,fontWeight:400,color:"#fff",fontFamily:"'Archivo Black',sans-serif",textTransform:"uppercase",letterSpacing:"0.02em"}}>Perfil</h1>
+      {/* Header — landing style */}
+      <div style={{padding:"18px 20px 10px",flexShrink:0}}>
+        <h1 style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:28,lineHeight:0.95,letterSpacing:"-0.01em",textTransform:"uppercase"}}>
+          <span style={{WebkitTextStroke:"1.5px #fff",color:"transparent"}}>PER</span><span style={{color:"#ff3b3b",WebkitTextStroke:"none"}}>FIL</span>
+        </h1>
       </div>
 
       {/* Scrollable content */}
@@ -118,8 +120,8 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
               { label: "VISTAS", value: watchedCount, color: "#ff3b3b" },
             ].map((stat, i) => (
               <div key={stat.label} style={{padding:"18px 12px",textAlign:"center",borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none"}}>
-                <div style={{fontSize:28,fontWeight:800,color:stat.color,letterSpacing:"-0.02em",lineHeight:1}}>{stat.value}</div>
-                <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.1em",marginTop:6}}>{stat.label}</div>
+                <div style={{fontSize:28,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:stat.color,letterSpacing:"-0.02em",lineHeight:1}}>{stat.value}</div>
+                <div style={{fontSize:10,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.08em",marginTop:6}}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -127,10 +129,10 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
 
         {/* Invite code */}
         <div style={{padding:"0 20px",marginBottom:20}}>
-          <p style={{margin:"0 0 10px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Tu codigo de invitacion</p>
-          <div style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"20px",textAlign:"center"}}>
+          <p style={{margin:"0 0 10px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Tu codigo de invitacion</p>
+          <div style={{background:"rgba(255,59,59,0.04)",border:"1px solid rgba(255,59,59,0.15)",borderRadius:20,padding:"20px",textAlign:"center"}}>
             <div style={{fontSize:30,fontWeight:300,letterSpacing:"0.18em",color:"#fff",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>{inviteCode}</div>
-            <p style={{margin:"0 0 16px",fontSize:12,color:"rgba(255,255,255,0.3)",lineHeight:1.5}}>Comparte este codigo para invitar amigos a VOSE</p>
+            <p style={{margin:"0 0 16px",fontSize:12,color:"rgba(255,255,255,0.3)",lineHeight:1.5}}>Comparte este codigo para invitar amigos a VO<span style={{color:"#ff3b3b",fontWeight:700}}>SE</span></p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={copyCode} style={{flex:1,padding:13,borderRadius:14,background:copied?"rgba(255,59,59,0.12)":"rgba(255,255,255,0.06)",border:`1px solid ${copied?"rgba(255,59,59,0.25)":"rgba(255,255,255,0.1)"}`,color:copied?"#ff3b3b":"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
                 {copied ? "Copiado ✓" : "Copiar"}
@@ -145,7 +147,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
         {/* Watch history — horizontal poster scroll */}
         {watchedMovies.length > 0 && (
           <div style={{marginBottom:20}}>
-            <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Historial</p>
+            <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Historial</p>
             <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
               {watchedMovies.map((w, i) => {
                 const poster = getPoster(w.title)

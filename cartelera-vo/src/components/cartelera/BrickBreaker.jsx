@@ -69,7 +69,7 @@ export default function BrickBreaker({ user, onClose }) {
     const H = canvas.height
     const config = getLevelConfig(currentLevel)
     const brickW = (W - BRICK_PAD * (config.cols + 1)) / config.cols
-    const brickH = 18
+    const brickH = 16
 
     const bricks = []
     let indestructiblePlaced = 0
@@ -93,7 +93,7 @@ export default function BrickBreaker({ user, onClose }) {
 
         bricks.push({
           x: BRICK_PAD + c * (brickW + BRICK_PAD),
-          y: 40 + r * (brickH + BRICK_PAD),
+          y: 14 + r * (brickH + BRICK_PAD),
           w: brickW,
           h: brickH,
           color: isIndestructible ? 'rgba(255,255,255,0.08)' : BRICK_COLORS[colorIdx],
@@ -110,8 +110,8 @@ export default function BrickBreaker({ user, onClose }) {
 
     return {
       W, H,
-      paddle: { x: W / 2 - PADDLE_W / 2, y: H - 30, w: PADDLE_W, h: PADDLE_H },
-      ball: { x: W / 2, y: H - 30 - BALL_R - 2, dx: BALL_SPEED * 0.7, dy: -BALL_SPEED * 0.7 },
+      paddle: { x: W / 2 - PADDLE_W / 2, y: H - 22, w: PADDLE_W, h: PADDLE_H },
+      ball: { x: W / 2, y: H - 22 - BALL_R - 2, dx: BALL_SPEED * 0.7, dy: -BALL_SPEED * 0.7 },
       bricks,
       score: carryScore,
       state: 'idle', // internal state for the game loop
@@ -220,12 +220,6 @@ export default function BrickBreaker({ user, onClose }) {
       roundRect(ctx, g.paddle.x, g.paddle.y, g.paddle.w, g.paddle.h, 6)
       ctx.fill()
 
-      // Score HUD
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.font = '600 12px "DM Sans", sans-serif'
-      ctx.textAlign = 'left'
-      ctx.fillText(`NIVEL ${g.level}  |  ${g.score} pts`, 12, 24)
-
       // Idle hint
       if (g.state === 'idle') {
         ctx.fillStyle = 'rgba(255,255,255,0.3)'
@@ -318,8 +312,8 @@ export default function BrickBreaker({ user, onClose }) {
             }
 
             // Check if row is clear
-            const rowIdx = Math.floor((b.y - 40) / (18 + BRICK_PAD))
-            const rowBricks = g.bricks.filter(bb => Math.floor((bb.y - 40) / (18 + BRICK_PAD)) === rowIdx && !bb.indestructible)
+            const rowIdx = Math.floor((b.y - 14) / (16 + BRICK_PAD))
+            const rowBricks = g.bricks.filter(bb => Math.floor((bb.y - 14) / (16 + BRICK_PAD)) === rowIdx && !bb.indestructible)
             if (rowBricks.every(bb => !bb.alive)) {
               rowsCleared.add(rowIdx)
             }

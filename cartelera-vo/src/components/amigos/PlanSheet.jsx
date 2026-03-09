@@ -75,7 +75,7 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
             </div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={onRespondNo} style={{flex:1,padding:16,borderRadius:14,background:"rgba(255,255,255,0.06)",border:"1.5px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.55)",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>No puedo</button>
-              <button onClick={onRespondYes} style={{flex:2,padding:16,borderRadius:14,background:"#fff",color:"#000",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none"}}>Perfecto ✓</button>
+              <button onClick={onRespondYes} style={{flex:2,padding:16,borderRadius:14,background:"#fff",color:"#000",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none"}}>Me cuadra y me sabe ✓</button>
             </div>
           </>
         )}
