@@ -93,15 +93,18 @@ export default function useProfile(user) {
       updates.email = user.email
     }
     if (Object.keys(updates).length > 0) {
-      supabase.from("perfiles").update(updates).eq("id", user.id)
       setProfile(p => ({ ...p, ...updates }))
+      supabase.from("perfiles").update(updates).eq("id", user.id).then(({ error }) => {
+        if (error) console.error('Profile sync failed:', error)
+      })
     }
   }, [user, profile?.id])
 
-  function updateProfile(patch) {
+  async function updateProfile(patch) {
     setProfile(p => ({ ...p, ...patch }))
     if (!user?.isDemo) {
-      supabase.from("perfiles").update(patch).eq("id", user.id)
+      const { error } = await supabase.from("perfiles").update(patch).eq("id", user.id)
+      if (error) console.error('Profile update failed:', error)
     }
   }
 
