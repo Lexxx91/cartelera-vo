@@ -48,6 +48,9 @@ function getActiveCampaign(overrides = []) {
   return CAMPAIGNS.find(c => {
     const ov = overrides.find(o => o.id === c.id)
     if (ov && ov.active === false) return false // admin disabled it
+    // Modo instant: active + sin fechas = siempre activa
+    if (ov && ov.active === true && !ov.start_date && !ov.end_date) return true
+    // Modo programada: comprobar rango de fechas
     const start = ov?.start_date || c.startDate
     const end = ov?.end_date || c.endDate
     return today >= start && today <= end
