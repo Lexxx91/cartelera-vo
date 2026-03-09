@@ -44,13 +44,17 @@ export default function useCampaigns(user) {
   async function saveOverride(campaignId, { active, start_date, end_date }) {
     if (!isAdmin) return
 
+    // Sanitize: empty strings → null (Supabase DATE columns reject '')
+    const cleanStart = start_date || null
+    const cleanEnd = end_date || null
+
     const { error } = await supabase
       .from('campaign_overrides')
       .upsert({
         id: campaignId,
         active,
-        start_date,
-        end_date,
+        start_date: cleanStart,
+        end_date: cleanEnd,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' })
 
@@ -59,13 +63,14 @@ export default function useCampaigns(user) {
       return false
     }
 
-    // Optimistic update
+    // Optimistic update (keep nulls for consistency)
     setOverrides(prev => {
       const existing = prev.find(o => o.id === campaignId)
+      const updated = { id: campaignId, active, start_date: cleanStart, end_date: cleanEnd }
       if (existing) {
-        return prev.map(o => o.id === campaignId ? { ...o, active, start_date, end_date } : o)
+        return prev.map(o => o.id === campaignId ? { ...o, ...updated } : o)
       }
-      return [...prev, { id: campaignId, active, start_date, end_date }]
+      return [...prev, updated]
     })
 
     return true
