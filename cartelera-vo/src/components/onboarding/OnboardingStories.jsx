@@ -6,10 +6,11 @@ const STORY_DURATION = 7000 // 7 seconds per story
 export default function OnboardingStories({ onComplete, onConnectWhatsApp }) {
   const [currentStory, setCurrentStory] = useState(0)
   const [progress, setProgress] = useState(0)
-  const [paused, setPaused] = useState(false)
   const timerRef = useRef(null)
   const startTimeRef = useRef(null)
   const elapsedRef = useRef(0)
+  const pointerDownTimeRef = useRef(null) // Track actual pointer down time
+  const pointerDownXRef = useRef(null) // Track pointer X position
 
   // Start/resume timer for current story
   const startTimer = useCallback(() => {
@@ -39,35 +40,39 @@ export default function OnboardingStories({ onComplete, onConnectWhatsApp }) {
   }, [currentStory, startTimer])
 
   // Pause/resume on hold
-  function handlePointerDown() {
-    setPaused(true)
+  function handlePointerDown(e) {
+    pointerDownTimeRef.current = Date.now()
+    pointerDownXRef.current = e.clientX || e.touches?.[0]?.clientX || 0
     elapsedRef.current += Date.now() - startTimeRef.current
     clearInterval(timerRef.current)
   }
 
   function handlePointerUp(e) {
-    setPaused(false)
-    // Determine tap direction
     const x = e.clientX || e.changedTouches?.[0]?.clientX || 0
     const mid = window.innerWidth / 2
 
-    // Only navigate if it was a quick tap (not a long hold)
-    const holdDuration = Date.now() - (startTimeRef.current || Date.now())
-    if (holdDuration < 300 || elapsedRef.current < 200) {
+    // Calculate how long the pointer was held down
+    const holdDuration = Date.now() - (pointerDownTimeRef.current || Date.now())
+
+    // Navigate on quick tap (< 250ms), ignore long holds (pauses)
+    if (holdDuration < 250) {
       if (x < mid) {
         // Previous
         if (currentStory > 0) {
           elapsedRef.current = 0
           setCurrentStory(c => c - 1)
+          return // startTimer called by useEffect
         }
       } else {
         // Next
         if (currentStory < TOTAL_STORIES - 1) {
           elapsedRef.current = 0
           setCurrentStory(c => c + 1)
+          return // startTimer called by useEffect
         }
       }
     }
+    // Resume timer if no navigation happened
     startTimer()
   }
 
@@ -136,6 +141,10 @@ export default function OnboardingStories({ onComplete, onConnectWhatsApp }) {
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-8px); }
+        }
+        @keyframes fadeOut {
+          from { opacity:1; }
+          to { opacity:0; }
         }
       `}</style>
 
@@ -235,7 +244,6 @@ function StorySwipe() {
           border: "3px solid #ff453a", borderRadius: 8, padding: "4px 14px",
           animation: "swipeDemo 4s ease-in-out infinite",
           animationDelay: "0s",
-          // Show only when card goes left (60% of cycle)
         }}>
           PASO
         </div>
@@ -249,7 +257,6 @@ function StorySwipe() {
           animation: "swipeDemo 4s ease-in-out infinite",
           boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
         }}>
-          {/* Fake movie poster content */}
           <div style={{
             width: "100%", height: "100%",
             background: "linear-gradient(180deg, #2a1a1a 0%, #0a0a0a 100%)",
@@ -419,11 +426,11 @@ function StoryNoPingPong() {
         margin: "0 0 28px", fontSize: 14, color: "rgba(255,255,255,0.5)",
         lineHeight: 1.5,
       }}>
-        Nada de intercambios infinitos. Marca tu disponibilidad y listo.
+        Nada de intercambios infinitos
       </p>
 
       {/* Chat mockup that gets crossed out → transforms to calendar */}
-      <div style={{ position: "relative", height: 240 }}>
+      <div style={{ position: "relative" }}>
         {/* WhatsApp-style chat bubbles */}
         <div style={{
           position: "relative",
@@ -468,9 +475,18 @@ function StoryNoPingPong() {
           </div>
         </div>
 
-        {/* Calendar result that pops in */}
+        {/* "Cada uno marca..." text — fades out when calendar appears */}
+        <p style={{
+          margin: "14px 0 0", fontSize: 13, color: "rgba(255,255,255,0.35)",
+          lineHeight: 1.6,
+          animation: "fadeInUp 0.4s ease-out 0.2s both, fadeOut 0.3s ease-out 3.5s forwards",
+        }}>
+          Cada uno marca cuando puede y el plan se monta solo.
+        </p>
+
+        {/* Calendar result that pops in (replaces the text above) */}
         <div style={{
-          marginTop: 16,
+          marginTop: 8,
           background: "rgba(52,199,89,0.08)",
           border: "1px solid rgba(52,199,89,0.2)",
           borderRadius: 14, padding: "14px 18px",
@@ -488,7 +504,7 @@ function StoryNoPingPong() {
             <p style={{
               margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)",
             }}>
-              Confirmado automaticamente
+              Confirmado automaticamente ✨
             </p>
           </div>
           <span style={{
@@ -499,13 +515,6 @@ function StoryNoPingPong() {
           </span>
         </div>
       </div>
-
-      <p style={{
-        margin: "20px 0 0", fontSize: 13, color: "rgba(255,255,255,0.35)",
-        lineHeight: 1.6,
-      }}>
-        Cada uno marca cuando puede y el plan se monta solo.
-      </p>
     </div>
   )
 }

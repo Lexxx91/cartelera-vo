@@ -203,7 +203,8 @@ export default function useProfile(user) {
 
     // Open WhatsApp FIRST — must be synchronous with user gesture
     // (mobile browsers block window.open/location.href after await)
-    const waUrl = `https://wa.me/${WA_BOT_NUMBER}?text=vose-${token}`
+    const msg = encodeURIComponent(`🎬 Ey Vocito! Conecta mi cuenta de VOSE para avisarme de pelis, matches y planes. Mi codigo: vose-${token}`)
+    const waUrl = `https://wa.me/${WA_BOT_NUMBER}?text=${msg}`
     window.location.href = waUrl
 
     // Start polling immediately (user will come back from WhatsApp)
