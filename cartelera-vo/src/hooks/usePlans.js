@@ -297,8 +297,18 @@ export default function usePlans(user, friends) {
 
     if (!rows) return []
 
-    // Filter: only plans where at least one participant is my friend
+    // Filter: only plans where at least one participant is my friend AND session is in the future
     return rows.filter(plan => {
+      // Exclude past plans
+      const session = plan.chosen_session
+      if (session?.date && session?.time) {
+        const [year, month, day] = session.date.split("-").map(Number)
+        const [hours, minutes] = (session.time || "00:00").split(":").map(Number)
+        if (year) {
+          const target = new Date(year, month - 1, day, (hours || 0) + 2, minutes || 0)
+          if (Date.now() > target.getTime()) return false
+        }
+      }
       return (plan.participants || []).some(pid => friendIds.includes(pid))
     }).map(plan => {
       const participantProfiles = (plan.participants || []).map(pid => {

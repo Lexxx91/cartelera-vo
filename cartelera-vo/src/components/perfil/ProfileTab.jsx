@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
+import AdminPanel from './AdminPanel.jsx'
 
-export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa }) {
+export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa, campaignOverrides, onSaveCampaignOverride, isAdmin, campaignsLoading }) {
   const { canInstall, isInstalled, isIOS, isIOSChrome, promptInstall } = pwa || {}
   const [editingName, setEditingName] = useState(false)
   const [displayName, setDisplayName] = useState(profile?.nombre_display || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Cinefilo")
@@ -34,7 +35,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   }
 
   function copyCode() {
-    const url = `https://carteleravo.app?code=${inviteCode}`
+    const url = `https://cartelera-vo.vercel.app?code=${inviteCode}`
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -42,7 +43,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   }
 
   function shareCode() {
-    const url = `https://carteleravo.app?code=${inviteCode}`
+    const url = `https://cartelera-vo.vercel.app?code=${inviteCode}`
     if (navigator.share) {
       navigator.share({
         title: "VOSE — El cine como debe sonar",
@@ -317,7 +318,7 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
                       <circle cx="12" cy="15.5" r="0.75" fill="rgba(255,255,255,0.3)"/>
                     </svg>
                     <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>
-                      En iPhone solo se puede instalar desde <strong style={{color:"rgba(255,255,255,0.75)"}}>Safari</strong>. Abre <strong style={{color:"rgba(255,255,255,0.75)"}}>carteleravo.app</strong> en Safari y ve a tu perfil.
+                      En iPhone solo se puede instalar desde <strong style={{color:"rgba(255,255,255,0.75)"}}>Safari</strong>. Abre <strong style={{color:"rgba(255,255,255,0.75)"}}>cartelera-vo.vercel.app</strong> en Safari y ve a tu perfil.
                     </p>
                   </div>
                 </div>
@@ -422,6 +423,15 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
               })}
             </div>
           </div>
+        )}
+
+        {/* Admin panel — only visible for admin user */}
+        {isAdmin && (
+          <AdminPanel
+            overrides={campaignOverrides || []}
+            onSaveOverride={onSaveCampaignOverride}
+            loading={campaignsLoading}
+          />
         )}
       </div>
     </div>

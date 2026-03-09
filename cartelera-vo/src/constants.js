@@ -19,6 +19,9 @@ export const SB_HEADERS = {
   "Prefer": "return=representation"
 }
 
+// Admin — only this email sees the admin panel
+export const ADMIN_EMAIL = 'alejandroelbisnes@gmail.com'
+
 // Plan states
 export const PLAN_STATES = {
   PROPOSED: 'proposed',

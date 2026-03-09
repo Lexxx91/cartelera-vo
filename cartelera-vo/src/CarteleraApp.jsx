@@ -9,6 +9,7 @@ import usePlans from './hooks/usePlans.js'
 import useMovies from './hooks/useMovies.js'
 import useDemo, { DEMO_FRIEND } from './hooks/useDemo.js'
 import usePWAInstall from './hooks/usePWAInstall.js'
+import useCampaigns from './hooks/useCampaigns.js'
 
 // Components
 import Toast from './components/Toast.jsx'
@@ -37,6 +38,9 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
 
   // PWA install detection
   const pwa = usePWAInstall()
+
+  // Campaign overrides (admin panel)
+  const { overrides: campaignOverrides, isAdmin, saveOverride: saveCampaignOverride, loading: campaignsLoading } = useCampaigns(user)
 
   // Demo mode: only active when using "Probar sin cuenta" (not for real Google users)
   const demo = useDemo(movies)
@@ -313,6 +317,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
           plan={confirmedOverlay.plan}
           posterUrl={confirmedOverlay.posterUrl}
           user={user}
+          inviteCode={profile?.invite_code}
           onClose={() => setConfirmedOverlay(null)}
         />
       )}
@@ -328,6 +333,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             friendVotes={friendVotes}
             onSwipe={handleSwipe}
             user={user}
+            campaignOverrides={campaignOverrides}
           />
         )}
         {tab === "amigos" && (
@@ -363,6 +369,10 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onSavePayer={handleSavePayer}
             onSaveRating={handleSaveRating}
             onShowShareCard={handleShowShareCard}
+            onLeavePlan={isDemoMode ? null : (planId) => {
+              realPlans.leavePlan(planId)
+              addToast({ type: "info", emoji: "👋", title: "Has salido del plan", body: "Ya no estás apuntado" })
+            }}
           />
         )}
         {tab === "perfil" && (
@@ -376,6 +386,10 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             movies={movies}
             inviteeCount={inviteeCount}
             pwa={pwa}
+            isAdmin={isAdmin}
+            campaignOverrides={campaignOverrides}
+            onSaveCampaignOverride={saveCampaignOverride}
+            campaignsLoading={campaignsLoading}
           />
         )}
       </div>

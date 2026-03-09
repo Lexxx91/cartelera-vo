@@ -17,12 +17,16 @@ export default function App() {
   const [pendingPlanJoin, setPendingPlanJoin] = useState(null)
 
   // Read ?plan=PLAN_ID from URL for deep linking
+  // Keep ?code= intact for Login.jsx to read (new users need the invite code)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const planId = params.get('plan')
     if (planId) {
       setPendingPlanJoin(planId)
-      window.history.replaceState({}, '', window.location.pathname)
+      // Remove only ?plan= but keep ?code= for Login to auto-fill
+      params.delete('plan')
+      const remaining = params.toString()
+      window.history.replaceState({}, '', remaining ? `?${remaining}` : window.location.pathname)
     }
   }, [])
 

@@ -8,13 +8,14 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       devOptions: {
-        enabled: true,
+        enabled: false,
         type: 'module',
       },
       includeAssets: [
         'favicon.ico',
         'icons/*.png',
         'splash/*.png',
+        'brands/*.png',
         'offline.html',
       ],
       manifest: {

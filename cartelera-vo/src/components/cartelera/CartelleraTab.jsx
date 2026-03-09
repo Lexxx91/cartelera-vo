@@ -2,7 +2,7 @@ import { useState } from 'react'
 import SwipeCard from './SwipeCard.jsx'
 import BrickBreaker from './BrickBreaker.jsx'
 
-export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe, user }) {
+export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe, user, campaignOverrides }) {
   const [swiped, setSwiped] = useState({})
   const [history, setHistory] = useState([])
   const [showGame, setShowGame] = useState(false)
@@ -122,7 +122,7 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
         {/* Brick Breaker game */}
         {!loading && !error && remaining.length === 0 && movies.length > 0 && showGame && (
           <div style={{flex:1,display:"flex",flexDirection:"column",padding:"0 4px",minHeight:0,maxHeight:"calc(100vh - 56px - 56px - 20px)",animation:"fadeIn 0.3s ease"}}>
-            <BrickBreaker user={user} onClose={() => setShowGame(false)} />
+            <BrickBreaker user={user} onClose={() => setShowGame(false)} campaignOverrides={campaignOverrides} />
           </div>
         )}
 

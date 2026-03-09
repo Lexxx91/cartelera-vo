@@ -8,7 +8,7 @@ const PLAN_CARD_COPY = [
   "VO manda, bro",
 ]
 
-export default function PlanConfirmedOverlay({ plan, posterUrl, onClose, user }) {
+export default function PlanConfirmedOverlay({ plan, posterUrl, onClose, user, inviteCode }) {
   const [cardBlob, setCardBlob] = useState(null)
   const [cardUrl, setCardUrl] = useState(null)
   const [sharing, setSharing] = useState(false)
@@ -221,7 +221,10 @@ export default function PlanConfirmedOverlay({ plan, posterUrl, onClose, user })
     // Deep link URL (prominent)
     ctx.fillStyle = 'rgba(255,59,59,0.7)'
     ctx.font = `600 ${11 * s}px 'DM Sans', sans-serif`
-    ctx.fillText(`cartelera-vo.vercel.app?plan=${plan.id}`, W / 2, inviteY + 20 * s)
+    const planUrl = inviteCode
+      ? `cartelera-vo.vercel.app?plan=${plan.id}&code=${inviteCode}`
+      : `cartelera-vo.vercel.app?plan=${plan.id}`
+    ctx.fillText(planUrl, W / 2, inviteY + 20 * s)
 
     // Footer: VOSE logo
     const footerY = H - 60 * s
@@ -263,7 +266,7 @@ export default function PlanConfirmedOverlay({ plan, posterUrl, onClose, user })
         await navigator.share({
           files: [file],
           title: 'VOSE — Vamos pal cine',
-          text: `${plan.movie_title} — ${session?.day || session?.date} a las ${session?.time}. Unite al plan: https://cartelera-vo.vercel.app?plan=${plan.id}`,
+          text: `${plan.movie_title} — ${session?.day || session?.date} a las ${session?.time}. Unite al plan: https://cartelera-vo.vercel.app?plan=${plan.id}${inviteCode ? `&code=${inviteCode}` : ''}`,
         })
       } else {
         // Fallback: download

@@ -79,7 +79,7 @@ function RatingPicker({ onRate }) {
   )
 }
 
-export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends, onSavePayer, posterUrl, onShare, onSaveRating }) {
+export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends, onSavePayer, posterUrl, onShare, onSaveRating, onLeavePlan }) {
   const [allSessions, setAllSessions] = useState([])
   const [myAvail, setMyAvail] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
@@ -111,6 +111,7 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
   function isMarked(s) { return !!myAvail.find(x => sKey(x) === sKey(s)) }
 
   const amIInitiator = plan.amIInitiator
+  const isThirdParty = !amIInitiator && plan.partner_id !== user?.id // joined via "Apuntarme", not initiator or partner
   const theirAvail = amIInitiator ? (plan.partner_availability || []) : (plan.initiator_availability || [])
   const proposed = plan.proposed_session
   const chosen = plan.chosen_session
@@ -498,7 +499,7 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
                     Compartir plan
                   </button>
                 )}
-                {!plan.payer_name && (
+                {!plan.payer_name && !isThirdParty && (
                   <button onClick={() => setShowRoulette(true)} style={{
                     width: "100%", padding: "14px 24px", borderRadius: 14,
                     background: "rgba(255,255,255,0.04)",
@@ -508,6 +509,30 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   }}>
                     🎰 ¿Quien compra las entradas?
+                  </button>
+                )}
+                {/* Third-party participant: show payer info + leave button */}
+                {isThirdParty && plan.payer_name && (
+                  <div style={{
+                    padding:"12px 16px",borderRadius:14,
+                    background:"rgba(255,165,0,0.08)",border:"1px solid rgba(255,165,0,0.2)",
+                    marginBottom:10,textAlign:"center",
+                  }}>
+                    <p style={{margin:0,fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.5}}>
+                      🎟️ <strong style={{color:"#ffb347"}}>{plan.payer_name}</strong> compra las entradas. Pregúntale si ya las compró para saber si comprar la tuya.
+                    </p>
+                  </div>
+                )}
+                {isThirdParty && onLeavePlan && (
+                  <button onClick={onLeavePlan} style={{
+                    width: "100%", padding: "14px 24px", borderRadius: 14,
+                    background: "rgba(255,69,58,0.06)",
+                    border: "1px solid rgba(255,69,58,0.15)",
+                    color: "rgba(255,69,58,0.6)", fontSize: 14, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "inherit",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}>
+                    Salir del plan
                   </button>
                 )}
               </div>

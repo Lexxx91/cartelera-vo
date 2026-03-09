@@ -4,6 +4,57 @@ import { SUPABASE_URL, SUPABASE_ANON } from '../../constants.js'
 // ─── Brick Breaker — Cinema Edition ──────────────────────────────────────────
 // Canvas game with levels + leaderboard backed by Supabase game_scores table
 
+// ─── Brand Campaigns ────────────────────────────────────────────────────────
+// Cada campaña tiene: id, fechas, assets y tema visual.
+// Cuando no hay campaña activa → se usa el juego original sin cambios.
+const CAMPAIGNS = [
+  {
+    id: 'gofio-lapina',
+    startDate: '2026-03-09',
+    endDate: '2026-04-10',
+    brickImage: '/brands/gofio-lapina.png',
+    multiHitImage: '/brands/gofio-lapina-fuerte.png',
+    brickCols: 9,
+    // Source crop: just the package, no white margins (from 1000x1000 PNG)
+    // brickHeight se calcula automáticamente de sw/sh para no estirar la imagen
+    imageCrop: { sx: 160, sy: 10, sw: 680, sh: 980 },
+    dustColors: ['#d4a748', '#c9953a', '#e8c87a', '#b8862d', '#f0d88f'],
+    ball: {
+      type: 'stone',
+      colors: { center: '#a89880', mid: '#8c7a68', edge: '#6b5d50', rim: '#4a3f35' },
+      trail: 'rgba(140,130,115,0.2)',
+    },
+  },
+  {
+    id: 'clipper',
+    startDate: '2026-04-11',
+    endDate: '2026-05-10',
+    brickImage: '/brands/clipper-naranja.png',
+    multiHitImage: '/brands/clipper-fresa.png',
+    brickCols: 9,
+    // Can bounds: ~274,1 → 927,1200 in both 1200×1200 PNGs
+    imageCrop: { sx: 270, sy: 0, sw: 660, sh: 1200 },
+    dustColors: ['#ff8c00', '#ff6b35', '#ffa559', '#e85d26', '#ffb380'],
+    ball: {
+      type: 'stone',
+      colors: { center: '#ffb347', mid: '#ff8c00', edge: '#e67300', rim: '#cc5500' },
+      trail: 'rgba(255,140,0,0.2)',
+    },
+  },
+]
+
+function getActiveCampaign(overrides = []) {
+  const today = new Date().toISOString().slice(0, 10)
+  return CAMPAIGNS.find(c => {
+    const ov = overrides.find(o => o.id === c.id)
+    if (ov && ov.active === false) return false // admin disabled it
+    const start = ov?.start_date || c.startDate
+    const end = ov?.end_date || c.endDate
+    return today >= start && today <= end
+  }) || null
+}
+
+// ─── Game constants ─────────────────────────────────────────────────────────
 const BRICK_PAD = 4
 const BALL_R = 6
 const PADDLE_H = 12
@@ -49,7 +100,7 @@ const LEVEL_UP_MSGS = [
   "Vamos alla",
 ]
 
-export default function BrickBreaker({ user, onClose }) {
+export default function BrickBreaker({ user, onClose, campaignOverrides }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
   const gameRef = useRef(null)
@@ -63,18 +114,67 @@ export default function BrickBreaker({ user, onClose }) {
 
   const isDemoMode = user?.isDemo === true
 
+  // ─── Campaign state ───────────────────────────────────────────────
+  const campaignRef = useRef(getActiveCampaign(campaignOverrides))
+  const brandImgRef = useRef(null)      // normal brick image (processed)
+  const multiHitImgRef = useRef(null)   // multi-hit brick image (processed)
+
+  useEffect(() => {
+    const campaign = campaignRef.current
+    if (!campaign?.brickImage) return
+
+    // Process image: remove white background → transparent
+    function processImage(src, ref) {
+      const img = new Image()
+      img.onload = () => {
+        const oc = document.createElement('canvas')
+        oc.width = img.width
+        oc.height = img.height
+        const octx = oc.getContext('2d')
+        octx.drawImage(img, 0, 0)
+        const id = octx.getImageData(0, 0, oc.width, oc.height)
+        const d = id.data
+        for (let i = 0; i < d.length; i += 4) {
+          // White-ish pixels → transparent
+          if (d[i] > 235 && d[i+1] > 235 && d[i+2] > 235) {
+            d[i+3] = 0
+          }
+          // Near-white → semi-transparent (smooth edges)
+          else if (d[i] > 210 && d[i+1] > 210 && d[i+2] > 210) {
+            d[i+3] = Math.floor(255 * (1 - (d[i] - 210) / 45))
+          }
+        }
+        octx.putImageData(id, 0, 0)
+        ref.current = oc
+      }
+      img.onerror = () => { ref.current = null }
+      img.src = src
+    }
+
+    processImage(campaign.brickImage, brandImgRef)
+    if (campaign.multiHitImage) {
+      processImage(campaign.multiHitImage, multiHitImgRef)
+    }
+  }, [])
+
   // ─── Init game state ────────────────────────────────────────────────
   const initGame = useCallback((canvas, currentLevel = 1, carryScore = 0) => {
     const W = canvas.width
     const H = canvas.height
     const config = getLevelConfig(currentLevel)
-    const brickW = (W - BRICK_PAD * (config.cols + 1)) / config.cols
-    const brickH = 16
+    const campaign = campaignRef.current
+    const activeCols = campaign?.brickCols || config.cols
+    const brickW = (W - BRICK_PAD * (activeCols + 1)) / activeCols
+    // Si hay imageCrop, calcular alto proporcional al paquete (no estirar)
+    const crop = campaign?.imageCrop
+    const brickH = crop
+      ? Math.round(brickW * (crop.sh / crop.sw))
+      : (campaign?.brickHeight || 16)
 
     const bricks = []
     let indestructiblePlaced = 0
     for (let r = 0; r < config.rows; r++) {
-      for (let c = 0; c < config.cols; c++) {
+      for (let c = 0; c < activeCols; c++) {
         const colorIdx = r % BRICK_COLORS.length
         let hits = 1
 
@@ -151,6 +251,11 @@ export default function BrickBreaker({ user, onClose }) {
       const g = gameRef.current
       if (!g) return
       const { W, H } = g
+      const campaign = campaignRef.current
+      const brandImg = brandImgRef.current
+      const multiHitImg = multiHitImgRef.current
+      const isBranded = !!(campaign && brandImg)
+
       ctx.clearRect(0, 0, W, H)
 
       // Background
@@ -161,29 +266,84 @@ export default function BrickBreaker({ user, onClose }) {
       g.bricks.forEach(b => {
         if (!b.alive) return
 
+        // Indestructible — same style regardless of campaign
         if (b.indestructible) {
-          // Hatched/distinct style for indestructible
-          ctx.fillStyle = 'rgba(255,255,255,0.06)'
-          ctx.strokeStyle = 'rgba(255,255,255,0.2)'
-          ctx.lineWidth = 1
+          if (isBranded) {
+            // Campaign: bloque sólido oscuro con borde dorado para que no parezca un hueco
+            ctx.fillStyle = 'rgba(40,32,20,0.7)'
+            ctx.strokeStyle = 'rgba(212,167,72,0.5)'
+            ctx.lineWidth = 1.5
+          } else {
+            ctx.fillStyle = 'rgba(255,255,255,0.06)'
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+            ctx.lineWidth = 1
+          }
           ctx.beginPath()
           roundRect(ctx, b.x, b.y, b.w, b.h, 4)
           ctx.fill()
           ctx.stroke()
+          // Icono candado (🔒) centrado
+          if (isBranded) {
+            ctx.fillStyle = 'rgba(212,167,72,0.4)'
+            ctx.font = `${Math.min(b.w, b.h) * 0.4}px sans-serif`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText('🔒', b.x + b.w / 2, b.y + b.h / 2)
+          }
           return
         }
 
-        ctx.fillStyle = b.flash > 0 ? '#fff' : b.color
-        if (b.flash > 0) b.flash--
-        ctx.beginPath()
-        roundRect(ctx, b.x, b.y, b.w, b.h, 4)
-        ctx.fill()
+        if (isBranded) {
+          // ── Campaign brick: draw brand image ──
+          // Choose image: multi-hit → pink package, normal → yellow package
+          const brickImg = (b.maxHits > 1 && multiHitImg) ? multiHitImg : brandImg
+          const crop = campaign.imageCrop
 
-        // Multi-hit border indicator
-        if (b.maxHits > 1 && b.hits > 0 && !b.indestructible) {
-          ctx.strokeStyle = '#fff'
-          ctx.lineWidth = b.hits >= 3 ? 2.5 : 1.5
-          ctx.stroke()
+          if (b.flash > 0) {
+            b.flash--
+            ctx.globalAlpha = 0.6
+            ctx.save()
+            ctx.beginPath()
+            roundRect(ctx, b.x, b.y, b.w, b.h, 4)
+            ctx.clip()
+            if (crop) {
+              ctx.drawImage(brickImg, crop.sx, crop.sy, crop.sw, crop.sh, b.x, b.y, b.w, b.h)
+            } else {
+              ctx.drawImage(brickImg, b.x, b.y, b.w, b.h)
+            }
+            ctx.restore()
+            ctx.globalAlpha = 1
+          } else {
+            // Dim alpha for multi-hit damage
+            if (b.maxHits > 1 && b.hits < b.maxHits) {
+              ctx.globalAlpha = 0.4 + (b.hits / b.maxHits) * 0.6
+            }
+            ctx.save()
+            ctx.beginPath()
+            roundRect(ctx, b.x, b.y, b.w, b.h, 4)
+            ctx.clip()
+            if (crop) {
+              ctx.drawImage(brickImg, crop.sx, crop.sy, crop.sw, crop.sh, b.x, b.y, b.w, b.h)
+            } else {
+              ctx.drawImage(brickImg, b.x, b.y, b.w, b.h)
+            }
+            ctx.restore()
+            ctx.globalAlpha = 1
+          }
+        } else {
+          // ── Original brick rendering ──
+          ctx.fillStyle = b.flash > 0 ? '#fff' : b.color
+          if (b.flash > 0) b.flash--
+          ctx.beginPath()
+          roundRect(ctx, b.x, b.y, b.w, b.h, 4)
+          ctx.fill()
+
+          // Multi-hit border indicator
+          if (b.maxHits > 1 && b.hits > 0 && !b.indestructible) {
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = b.hits >= 3 ? 2.5 : 1.5
+            ctx.stroke()
+          }
         }
       })
 
@@ -192,11 +352,23 @@ export default function BrickBreaker({ user, onClose }) {
       g.particles.forEach(p => {
         p.x += p.vx
         p.y += p.vy
-        p.vy += 0.1
+        p.vy += (p.gravity ?? 0.1) // default = original gravity
+        p.vx *= (p.drag ?? 1)      // air resistance for campaign particles
         p.life--
+        if (p.size) p.size *= (p.shrink ?? 1) // shrinking for campaign dust clouds
+
         ctx.globalAlpha = p.life / p.maxLife
         ctx.fillStyle = p.color
-        ctx.fillRect(p.x, p.y, 3, 3)
+
+        if (p.size) {
+          // Campaign: circle particle (dust cloud)
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, Math.max(0.5, p.size), 0, Math.PI * 2)
+          ctx.fill()
+        } else {
+          // Original: 3x3 square particle
+          ctx.fillRect(p.x, p.y, 3, 3)
+        }
       })
       ctx.globalAlpha = 1
 
@@ -204,15 +376,35 @@ export default function BrickBreaker({ user, onClose }) {
       if (g.state === 'playing') {
         ctx.beginPath()
         ctx.arc(g.ball.x - g.ball.dx * 0.5, g.ball.y - g.ball.dy * 0.5, BALL_R * 0.7, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255,59,59,0.25)'
+        ctx.fillStyle = isBranded ? campaign.ball.trail : 'rgba(255,59,59,0.25)'
         ctx.fill()
       }
 
       // Ball
       ctx.beginPath()
       ctx.arc(g.ball.x, g.ball.y, BALL_R, 0, Math.PI * 2)
-      ctx.fillStyle = '#ff3b3b'
-      ctx.fill()
+      if (isBranded && campaign.ball.type === 'stone') {
+        // ── Campaign: stone ball with radial gradient ──
+        const bc = campaign.ball.colors
+        const stoneGrad = ctx.createRadialGradient(
+          g.ball.x - 1.5, g.ball.y - 1.5, 0,
+          g.ball.x, g.ball.y, BALL_R
+        )
+        stoneGrad.addColorStop(0, bc.center)
+        stoneGrad.addColorStop(0.5, bc.mid)
+        stoneGrad.addColorStop(0.85, bc.edge)
+        stoneGrad.addColorStop(1, bc.rim)
+        ctx.fillStyle = stoneGrad
+        ctx.fill()
+        // Subtle dark rim
+        ctx.strokeStyle = 'rgba(60,50,40,0.5)'
+        ctx.lineWidth = 0.5
+        ctx.stroke()
+      } else {
+        // ── Original: red ball ──
+        ctx.fillStyle = '#ff3b3b'
+        ctx.fill()
+      }
 
       // Paddle
       ctx.fillStyle = '#fff'
@@ -232,6 +424,11 @@ export default function BrickBreaker({ user, onClose }) {
     function update() {
       const g = gameRef.current
       if (!g || g.state !== 'playing') return
+      const campaign = campaignRef.current
+      const brandImg = brandImgRef.current
+      const isBranded = !!(campaign && brandImg)
+      // brickH: usar el alto real del primer ladrillo (ya calculado en initGame)
+      const brickH = g.bricks[0]?.h || 16
 
       // Move ball
       g.ball.x += g.ball.dx * g.speedMult
@@ -298,22 +495,60 @@ export default function BrickBreaker({ user, onClose }) {
             g.score += b.points
             setScore(g.score)
 
-            // Spawn particles
-            for (let i = 0; i < 6; i++) {
-              g.particles.push({
-                x: b.x + b.w / 2,
-                y: b.y + b.h / 2,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 3,
-                color: b.baseColor === '#ff3b3b' ? '#ff3b3b' : '#fff',
-                life: 20 + Math.random() * 15,
-                maxLife: 35,
-              })
+            if (isBranded) {
+              // ── Campaign particles: gofio dust ──
+              const dustColors = campaign.dustColors
+
+              // Dust clouds — big circles floating UP
+              for (let i = 0; i < 8; i++) {
+                g.particles.push({
+                  x: b.x + Math.random() * b.w,
+                  y: b.y + Math.random() * b.h,
+                  vx: (Math.random() - 0.5) * 2.5,
+                  vy: -(Math.random() * 2 + 0.5),
+                  gravity: -0.02,
+                  drag: 0.98,
+                  color: dustColors[Math.floor(Math.random() * dustColors.length)],
+                  life: 30 + Math.random() * 20,
+                  maxLife: 50,
+                  size: 4 + Math.random() * 2,
+                  shrink: 0.97,
+                })
+              }
+
+              // Fast specks — tiny squares shooting upward
+              for (let i = 0; i < 6; i++) {
+                g.particles.push({
+                  x: b.x + b.w / 2,
+                  y: b.y + b.h / 2,
+                  vx: (Math.random() - 0.5) * 5,
+                  vy: -(Math.random() * 4 + 1),
+                  gravity: 0,
+                  drag: 0.96,
+                  color: dustColors[Math.floor(Math.random() * dustColors.length)],
+                  life: 15 + Math.random() * 10,
+                  maxLife: 25,
+                  // no size → renders as original 3x3 square style but smaller handled by life
+                })
+              }
+            } else {
+              // ── Original particles ──
+              for (let i = 0; i < 6; i++) {
+                g.particles.push({
+                  x: b.x + b.w / 2,
+                  y: b.y + b.h / 2,
+                  vx: (Math.random() - 0.5) * 4,
+                  vy: (Math.random() - 0.5) * 3,
+                  color: b.baseColor === '#ff3b3b' ? '#ff3b3b' : '#fff',
+                  life: 20 + Math.random() * 15,
+                  maxLife: 35,
+                })
+              }
             }
 
             // Check if row is clear
-            const rowIdx = Math.floor((b.y - 14) / (16 + BRICK_PAD))
-            const rowBricks = g.bricks.filter(bb => Math.floor((bb.y - 14) / (16 + BRICK_PAD)) === rowIdx && !bb.indestructible)
+            const rowIdx = Math.floor((b.y - 14) / (brickH + BRICK_PAD))
+            const rowBricks = g.bricks.filter(bb => Math.floor((bb.y - 14) / (brickH + BRICK_PAD)) === rowIdx && !bb.indestructible)
             if (rowBricks.every(bb => !bb.alive)) {
               rowsCleared.add(rowIdx)
             }

@@ -59,6 +59,47 @@ function addToCalendar(movieTitle, session, inviteeEmails) {
   window.open(`https://calendar.google.com/calendar/r/eventedit?${params.toString()}`, '_blank')
 }
 
+// Confetti particle component for friend accept celebration
+function FriendConfetti({ onDone }) {
+  const emojis = ['🎉','🤝','✨','🎊','⭐','💫']
+  const [particles] = useState(() =>
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      emoji: emojis[i % emojis.length],
+      x: 30 + Math.random() * 40, // % from left
+      delay: Math.random() * 0.3,
+      duration: 1 + Math.random() * 0.5,
+      drift: (Math.random() - 0.5) * 40,
+      size: 14 + Math.random() * 10,
+    }))
+  )
+  useEffect(() => {
+    const t = setTimeout(onDone, 1800)
+    return () => clearTimeout(t)
+  }, [onDone])
+  return (
+    <div style={{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden',zIndex:10}}>
+      <style>{`
+        @keyframes confettiFly{
+          0%{transform:translateY(0) translateX(0) scale(1) rotate(0deg);opacity:1}
+          70%{opacity:1}
+          100%{transform:translateY(-120px) translateX(var(--drift)) scale(0.3) rotate(360deg);opacity:0}
+        }
+      `}</style>
+      {particles.map(p => (
+        <span key={p.id} style={{
+          position:'absolute', left:`${p.x}%`, bottom:'10px',
+          fontSize:p.size,
+          '--drift': `${p.drift}px`,
+          animation: `confettiFly ${p.duration}s ease-out ${p.delay}s forwards`,
+          opacity:0,
+          animationFillMode:'forwards',
+        }}>{p.emoji}</span>
+      ))}
+    </div>
+  )
+}
+
 export default function AmigosTab({
   user, friends, pendingIn, pendingOut,
   onAcceptFriend, onRemoveFriend,
@@ -78,6 +119,7 @@ export default function AmigosTab({
   onSavePayer,
   onShowShareCard,
   onSaveRating,
+  onLeavePlan,
   profile,
 }) {
   const [activePlan, setActivePlan] = useState(null)
@@ -86,6 +128,9 @@ export default function AmigosTab({
   const [discoverSentTo, setDiscoverSentTo] = useState(new Set())
   const [discoverSending, setDiscoverSending] = useState(null)
   const [discoverSearch, setDiscoverSearch] = useState('')
+  const [celebratingId, setCelebratingId] = useState(null)
+  const [dismissingId, setDismissingId] = useState(null)
+  const [hiddenIds, setHiddenIds] = useState(new Set())
 
   // Load discoverable users on mount
   useEffect(() => {
@@ -142,6 +187,7 @@ export default function AmigosTab({
             onSavePayer={(payerName) => onSavePayer && onSavePayer(plan.id, payerName)}
             onShare={() => onShowShareCard && onShowShareCard(plan.id)}
             onSaveRating={onSaveRating ? (rating) => onSaveRating(plan.id, rating) : null}
+            onLeavePlan={onLeavePlan ? () => { onLeavePlan(plan.id); setActivePlan(null) } : null}
           />
         </div>
       )
@@ -219,6 +265,99 @@ export default function AmigosTab({
 
         {hasAnyFriends && (
           <>
+            {/* ═══ FRIEND REQUESTS — prominent section at TOP ═══ */}
+            {pendingIn.filter(r => !hiddenIds.has(r.friendshipId)).length > 0 && (
+              <div style={{
+                margin:"0 16px 16px",borderRadius:18,overflow:"hidden",
+                background:"linear-gradient(180deg, rgba(255,69,58,0.1) 0%, rgba(255,69,58,0.02) 100%)",
+                border:"1px solid rgba(255,69,58,0.2)",
+                animation:"fadeIn 0.4s ease",
+              }}>
+                {/* Header */}
+                <div style={{padding:"14px 16px 8px",display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:24}}>👋</span>
+                  <div>
+                    <p style={{margin:0,fontSize:14,fontWeight:700,color:"#fff"}}>
+                      {pendingIn.filter(r => !hiddenIds.has(r.friendshipId)).length === 1
+                        ? "Tienes una solicitud de amistad"
+                        : `Tienes ${pendingIn.filter(r => !hiddenIds.has(r.friendshipId)).length} solicitudes de amistad`}
+                    </p>
+                    <p style={{margin:"2px 0 0",fontSize:11,color:"rgba(255,255,255,0.35)"}}>¡Alguien quiere ir al cine contigo!</p>
+                  </div>
+                </div>
+
+                {/* Request cards */}
+                <div style={{padding:"6px 12px 12px"}}>
+                  {pendingIn.filter(r => !hiddenIds.has(r.friendshipId)).map(req => {
+                    const isCelebrating = celebratingId === req.friendshipId
+                    const isDismissing = dismissingId === req.friendshipId
+                    return (
+                      <div key={req.friendshipId} style={{
+                        position:"relative",
+                        display:"flex",alignItems:"center",gap:12,
+                        background: isCelebrating ? "rgba(52,199,89,0.15)" : "rgba(255,255,255,0.04)",
+                        border: isCelebrating ? "1px solid rgba(52,199,89,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                        borderRadius:14,padding:"12px 14px",marginBottom:8,
+                        transition:"all 0.4s ease",
+                        transform: isDismissing ? "translateX(-110%)" : "translateX(0)",
+                        opacity: isDismissing ? 0 : 1,
+                        maxHeight: isDismissing ? 0 : 80,
+                        overflow:"hidden",
+                      }}>
+                        {isCelebrating && <FriendConfetti onDone={() => {
+                          setCelebratingId(null)
+                          setHiddenIds(prev => new Set([...prev, req.friendshipId]))
+                        }} />}
+                        {/* Avatar */}
+                        <div style={{width:44,height:44,borderRadius:"50%",overflow:"hidden",flexShrink:0,
+                          background:"linear-gradient(135deg,#2a2a2a,#1a1a1a)",
+                          border:"2px solid rgba(255,255,255,0.12)",
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                        }}>
+                          {req.avatar_url ? (
+                            <img src={req.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                          ) : (
+                            <span style={{fontSize:16,fontWeight:700,color:"#fff"}}>{(req.nombre_display || req.nombre || "?").charAt(0)}</span>
+                          )}
+                        </div>
+                        {/* Name */}
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{margin:0,fontSize:15,fontWeight:700,color:"#fff"}}>{req.nombre_display || req.nombre}</p>
+                          <p style={{margin:"2px 0 0",fontSize:11,color:"rgba(255,255,255,0.3)"}}>Quiere ser tu amigo</p>
+                        </div>
+                        {/* Buttons */}
+                        <button onClick={() => {
+                          setCelebratingId(req.friendshipId)
+                          onAcceptFriend(req.friendshipId)
+                        }} style={{
+                          padding:"8px 16px",borderRadius:10,
+                          background:"#34c759",border:"none",
+                          color:"#fff",fontSize:13,fontWeight:800,
+                          cursor:"pointer",fontFamily:"inherit",
+                          animation:"pulse 2s ease-in-out infinite",
+                          boxShadow:"0 2px 12px rgba(52,199,89,0.3)",
+                        }}>✓</button>
+                        <button onClick={() => {
+                          setDismissingId(req.friendshipId)
+                          setTimeout(() => {
+                            setHiddenIds(prev => new Set([...prev, req.friendshipId]))
+                            setDismissingId(null)
+                            onRemoveFriend(req.friendshipId)
+                          }, 400)
+                        }} style={{
+                          padding:"8px 10px",borderRadius:10,
+                          background:"transparent",
+                          border:"1px solid rgba(255,255,255,0.15)",
+                          color:"rgba(255,255,255,0.4)",fontSize:13,fontWeight:600,
+                          cursor:"pointer",fontFamily:"inherit",
+                        }}>✕</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Demo banner — compact pill */}
             {isDemoMode && (
               <div style={{margin:"0 20px 14px",borderRadius:12,background:"rgba(255,59,59,0.06)",border:"1px solid rgba(255,59,59,0.15)",padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
@@ -256,28 +395,6 @@ export default function AmigosTab({
                 </div>
               </div>
             </div>
-
-            {/* Pending friend requests — compact */}
-            {pendingIn.length > 0 && (
-              <div style={{padding:"0 20px",marginBottom:16}}>
-                {pendingIn.map(req => (
-                  <div key={req.friendshipId} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(100,149,237,0.06)",border:"1px solid rgba(100,149,237,0.15)",borderRadius:14,padding:"10px 14px",marginBottom:6}}>
-                    <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(100,149,237,0.25)",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      {req.avatar_url ? (
-                        <img src={req.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                      ) : (
-                        <span style={{fontSize:12,fontWeight:700,color:"#fff"}}>{(req.nombre_display || req.nombre || "?").charAt(0)}</span>
-                      )}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <p style={{margin:0,fontSize:13,fontWeight:600,color:"#fff"}}>{req.nombre_display || req.nombre}</p>
-                    </div>
-                    <button onClick={() => onAcceptFriend(req.friendshipId)} style={{padding:"6px 14px",borderRadius:8,background:"rgba(255,59,59,0.12)",border:"1px solid rgba(255,59,59,0.25)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Aceptar</button>
-                    <button onClick={() => onRemoveFriend(req.friendshipId)} style={{padding:"6px 8px",borderRadius:8,background:"rgba(255,69,58,0.08)",border:"1px solid rgba(255,69,58,0.15)",color:"#ff453a",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Pending outgoing — show where my sent invitations are */}
             {pendingOut.length > 0 && (
@@ -415,27 +532,43 @@ export default function AmigosTab({
 
                 {openPlans.map(plan => {
                   const poster = getPoster(plan.movie_title)
+                  const hasPayer = !!plan.payer_name
                   return (
-                    <div key={plan.id} style={{display:"flex",gap:14,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:12,marginBottom:10,alignItems:"center"}}>
-                      <div style={{width:56,height:84,borderRadius:8,overflow:"hidden",flexShrink:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
-                        {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <p style={{margin:"0 0 4px",fontSize:15,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
-                        {plan.chosen_session && (
-                          <p style={{margin:"0 0 6px",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
-                            {plan.chosen_session.day || plan.chosen_session.date} · {plan.chosen_session.time}
-                          </p>
-                        )}
-                        <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
-                          {(plan.participantProfiles || []).map((p, i) => (
-                            <span key={i} style={{fontSize:10,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:6}}>{p.nombre_display || p.nombre}</span>
-                          ))}
+                    <div key={plan.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,marginBottom:10,overflow:"hidden"}}>
+                      <div style={{display:"flex",gap:14,padding:12,alignItems:"center"}}>
+                        <div style={{width:56,height:84,borderRadius:8,overflow:"hidden",flexShrink:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
+                          {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
                         </div>
-                        <button onClick={() => onJoinPlan(plan.id)} style={{padding:"7px 18px",borderRadius:8,background:"rgba(255,59,59,0.1)",border:"1px solid rgba(255,59,59,0.25)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                          Apuntarme
-                        </button>
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{margin:"0 0 4px",fontSize:15,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{plan.movie_title}</p>
+                          {plan.chosen_session && (
+                            <p style={{margin:"0 0 6px",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
+                              {plan.chosen_session.day || plan.chosen_session.date} · {plan.chosen_session.time}
+                            </p>
+                          )}
+                          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
+                            {(plan.participantProfiles || []).map((p, i) => (
+                              <span key={i} style={{fontSize:10,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:6}}>{p.nombre_display || p.nombre}</span>
+                            ))}
+                          </div>
+                          {!hasPayer && (
+                            <button onClick={() => onJoinPlan(plan.id)} style={{padding:"7px 18px",borderRadius:8,background:"rgba(255,59,59,0.1)",border:"1px solid rgba(255,59,59,0.25)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                              Apuntarme
+                            </button>
+                          )}
+                        </div>
                       </div>
+                      {/* Payer warning — tickets already assigned */}
+                      {hasPayer && (
+                        <div style={{margin:"0 12px 12px",padding:"10px 14px",borderRadius:12,background:"rgba(255,165,0,0.08)",border:"1px solid rgba(255,165,0,0.2)"}}>
+                          <p style={{margin:"0 0 8px",fontSize:12,color:"rgba(255,255,255,0.7)",lineHeight:1.5}}>
+                            🎟️ <strong style={{color:"#ffb347"}}>{plan.payer_name}</strong> compra las entradas para este plan. Pregúntale si ya las compró para saber si comprar la tuya.
+                          </p>
+                          <button onClick={() => onJoinPlan(plan.id)} style={{padding:"8px 18px",borderRadius:8,background:"rgba(255,165,0,0.15)",border:"1px solid rgba(255,165,0,0.3)",color:"#ffb347",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                            Entendido, ¡me apunto!
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
