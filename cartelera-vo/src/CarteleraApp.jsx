@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 
 // Hooks
@@ -27,7 +27,6 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [openPlans, setOpenPlans] = useState([])
   const [localVotes, setLocalVotes] = useState({}) // local votes for demo mode
   const [confirmedOverlay, setConfirmedOverlay] = useState(null)
-  const prevPlansRef = useRef([])
 
   // Initialize hooks
   const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount } = useProfile(user)
@@ -79,31 +78,6 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     return () => clearInterval(interval)
   }, [isDemoMode, realFriends, realPlans.getOpenPlans])
 
-  // Auto-detect plan confirmation → show overlay with roulette + share card
-  useEffect(() => {
-    const prevPlans = prevPlansRef.current
-    if (prevPlans.length === 0 && plans.length > 0) {
-      prevPlansRef.current = plans.map(p => ({ id: p.id, status: getMyState(p) }))
-      return
-    }
-
-    for (const plan of plans) {
-      const state = getMyState(plan)
-      if (state === 'confirmed') {
-        const prev = prevPlans.find(pp => pp.id === plan.id)
-        if (!prev || prev.status !== 'confirmed') {
-          // Plan just transitioned to confirmed (or appeared new as confirmed)!
-          const poster = (movies || []).find(m => m.title === plan.movie_title)?.poster
-          setConfirmedOverlay({ plan, posterUrl: poster })
-          setTab("amigos")
-          break
-        }
-      }
-    }
-
-    prevPlansRef.current = plans.map(p => ({ id: p.id, status: getMyState(p) }))
-  }, [plans, getMyState, movies])
-
   // Auto-join plan from deep link
   useEffect(() => {
     if (!pendingPlanJoin) return
@@ -122,6 +96,12 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
         const matchResult = demo.checkDemoMatch(movie.title)
         if (matchResult) {
           setMatchPopup({ movie, matchedFriends: matchResult })
+        } else {
+          // Plan already exists for this movie — notify user
+          const voters = friendVotes[movie.title] || []
+          if (voters.length > 0) {
+            addToast({ type: "info", emoji: "📋", title: "Ya tienes un plan", body: `Ya compartiste disponibilidad para esta peli` })
+          }
         }
       }
     } else {
@@ -147,7 +127,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     }
     setMatchPopup(null)
     if (plan) {
-      addToast({ type: "match", emoji: "🎯", title: "Plan creado", body: `${friend.nombre_display || friend.nombre} sera notificado` })
+      addToast({ type: "match", emoji: "🎯", title: "Disponibilidad enviada", body: `${friend.nombre_display || friend.nombre} será notificado` })
       setTab("amigos")
 
       // Send email notification to partner (fire-and-forget, don't block UI)
@@ -175,6 +155,11 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
       const matchResult = demo.checkDemoMatch(movieTitle)
       if (matchResult && movie) {
         setMatchPopup({ movie, matchedFriends: matchResult })
+      } else {
+        const voters = friendVotes[movieTitle] || []
+        if (voters.length > 0) {
+          addToast({ type: "info", emoji: "📋", title: "Ya tienes un plan", body: `Ya compartiste disponibilidad para esta peli` })
+        }
       }
     } else {
       const result = await realVotes.vote(movieTitle, 'voy')

@@ -218,7 +218,7 @@ export default function useDemo(movies) {
           updated_at: new Date().toISOString(),
         }
       }))
-    }, 2000 + Math.random() * 1000)
+    }, 6000 + Math.random() * 2000)
 
     return plan
   }
@@ -261,7 +261,7 @@ export default function useDemo(movies) {
     setDemoPlans(prev => prev.map(p => {
       if (p.id !== planId) return p
       const updated = { ...p, initiator_response: 'yes', updated_at: new Date().toISOString() }
-      // Simulate Carlos responding YES after 2-3s
+      // Simulate Carlos responding YES after 6-8s
       setTimeout(() => {
         setDemoPlans(prev2 => prev2.map(p2 => {
           if (p2.id !== planId) return p2
@@ -273,7 +273,7 @@ export default function useDemo(movies) {
             updated_at: new Date().toISOString(),
           }
         }))
-      }, 2000 + Math.random() * 1000)
+      }, 6000 + Math.random() * 2000)
       return updated
     }))
   }
@@ -297,7 +297,7 @@ export default function useDemo(movies) {
       if (p.id !== planId) return p
       const updated = { ...p, initiator_availability: sessions, updated_at: new Date().toISOString() }
 
-      // Simulate Carlos picking the first session after 2-3s
+      // Simulate Carlos picking the first session after 6-8s
       setTimeout(() => {
         setDemoPlans(prev2 => prev2.map(p2 => {
           if (p2.id !== planId) return p2
@@ -308,7 +308,7 @@ export default function useDemo(movies) {
             updated_at: new Date().toISOString(),
           }
         }))
-      }, 2000 + Math.random() * 1000)
+      }, 6000 + Math.random() * 2000)
 
       return updated
     }))

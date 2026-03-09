@@ -142,15 +142,66 @@ export default function MatchPopup({ movie, matchedFriends, user, onSelectSessio
           </div>
         )}
 
-        {/* Multi-select sessions grid */}
-        {allSessions.length > 0 && (
+        {/* Single session — simplified UI */}
+        {allSessions.length === 1 && (() => {
+          const s = allSessions[0]
+          return (
+            <>
+              <p style={{
+                margin: "0 0 12px", fontSize: 11, fontWeight: 700,
+                color: "rgba(255,255,255,0.3)", textTransform: "uppercase",
+                letterSpacing: "0.1em", textAlign: "center",
+              }}>
+                Solo hay una sesion disponible
+              </p>
+
+              <div style={{
+                width: "100%", background: "rgba(255,59,59,0.08)",
+                border: "1px solid rgba(255,59,59,0.2)",
+                borderRadius: 18, padding: 20, marginBottom: 20, textAlign: "center",
+              }}>
+                <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
+                  {s.day || s.date}
+                </p>
+                <p style={{ margin: "0 0 8px", fontSize: 32, fontWeight: 800, color: "#fff", letterSpacing: "-1px", lineHeight: 1 }}>
+                  {s.time}
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+                  📍 {s.cinema}
+                </p>
+              </div>
+
+              <button
+                onClick={() => onSelectSession([s], friend)}
+                style={{
+                  width: "100%", padding: "16px", borderRadius: 14,
+                  background: "#fff", color: "#000",
+                  fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  fontFamily: "inherit", border: "none",
+                  marginBottom: 12, transition: "all 0.2s",
+                }}
+              >
+                Enviar a {friendName}
+              </button>
+            </>
+          )
+        })()}
+
+        {/* Multi-select sessions grid (2+ sessions) */}
+        {allSessions.length >= 2 && (
           <>
             <p style={{
-              margin: "0 0 14px", fontSize: 11, fontWeight: 700,
+              margin: "0 0 4px", fontSize: 11, fontWeight: 700,
               color: "rgba(255,255,255,0.3)", textTransform: "uppercase",
               letterSpacing: "0.1em", textAlign: "center",
             }}>
-              Marca cuando puedes ir
+              Marca todas las que te vengan bien
+            </p>
+            <p style={{
+              margin: "0 0 16px", fontSize: 12,
+              color: "rgba(255,255,255,0.25)", textAlign: "center",
+            }}>
+              Le pasaremos tu disponibilidad a {friendName}
             </p>
 
             <div style={{ width: "100%", marginBottom: 16 }}>
@@ -202,7 +253,7 @@ export default function MatchPopup({ movie, matchedFriends, user, onSelectSessio
               ))}
             </div>
 
-            {/* Confirm button */}
+            {/* Share availability button */}
             <button
               onClick={handleConfirm}
               disabled={selected.length === 0}
@@ -217,10 +268,8 @@ export default function MatchPopup({ movie, matchedFriends, user, onSelectSessio
               }}
             >
               {selected.length === 0
-                ? "Selecciona al menos una sesion"
-                : selected.length === 1
-                  ? "Confirmar 1 sesion"
-                  : `Confirmar ${selected.length} sesiones`}
+                ? "Selecciona al menos una opcion"
+                : "Compartir disponibilidad"}
             </button>
           </>
         )}
