@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import SwipeCard from './SwipeCard.jsx'
+import BrickBreaker from './BrickBreaker.jsx'
 
-export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe }) {
+export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe, user }) {
   const [swiped, setSwiped] = useState({})
   const [history, setHistory] = useState([])
+  const [showGame, setShowGame] = useState(false)
 
   // Filter: only movies I haven't voted on
   const remaining = movies.filter(m => !swiped[m.title] && !myVotes[m.title])
@@ -27,18 +29,29 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
     setHistory(prev => prev.slice(0, -1))
   }
 
+  function resetAll() {
+    setSwiped({})
+    setHistory([])
+    setShowGame(false)
+  }
+
   const stackCards = remaining.slice(0, 4)
   const total = movies.length
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)",overflow:"hidden"}}>
-      {/* Header — centered vertically in the space above cards */}
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,minHeight:0}}>
-        <h1 style={{margin:0,fontSize:56,fontWeight:400,letterSpacing:"0.02em",fontFamily:"'Archivo Black',sans-serif",color:"#fff",textAlign:"center",textTransform:"uppercase"}}>VO<span style={{color:"#ff3b3b"}}>SE</span></h1>
+      {/* Header — VOSE logo */}
+      <div style={{
+        flex: remaining.length > 0 ? 1 : "0 0 auto",
+        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        gap:8,minHeight:0,
+        padding: remaining.length > 0 ? 0 : "20px 0 0",
+      }}>
+        <h1 style={{margin:0,fontSize: remaining.length > 0 ? 56 : 36,fontWeight:400,letterSpacing:"0.02em",fontFamily:"'Archivo Black',sans-serif",color:"#fff",textAlign:"center",textTransform:"uppercase",transition:"font-size 0.3s ease"}}>VO<span style={{color:"#ff3b3b"}}>SE</span></h1>
       </div>
 
       {/* Main content */}
-      <div style={{flexShrink:0,overflow:"visible",position:"relative",padding:"0 20px",display:"flex",flexDirection:"column"}}>
+      <div style={{flex: remaining.length > 0 ? "0 0 auto" : 1,overflow:"visible",position:"relative",padding:"0 20px",display:"flex",flexDirection:"column",minHeight:0}}>
         {loading && (
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,gap:16}}>
             <div style={{width:28,height:28,border:"3px solid rgba(255,255,255,0.1)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}} />
@@ -61,13 +74,53 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
           </div>
         )}
 
-        {!loading && !error && remaining.length === 0 && movies.length > 0 && (
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,textAlign:"center",gap:16}}>
-            <div style={{fontSize:52}}>🎉</div>
-            <h3 style={{margin:0,fontSize:22,fontWeight:700,letterSpacing:"-0.02em"}}>Estas al dia</h3>
-            <p style={{margin:0,fontSize:14,color:"rgba(255,255,255,0.45)",maxWidth:260,lineHeight:1.5}}>
-              Has revisado las {total} peliculas en cartelera VO. Vuelve manana para ver novedades.
+        {!loading && !error && remaining.length === 0 && movies.length > 0 && !showGame && (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,textAlign:"center",gap:0,padding:"0 24px",animation:"fadeIn 0.6s ease"}}>
+            {/* Headline — Canarian vibes */}
+            <h2 style={{margin:"0 0 16px",fontFamily:"'Archivo Black',sans-serif",fontSize:44,lineHeight:0.95,letterSpacing:"-0.02em",textTransform:"uppercase"}}>
+              <span style={{WebkitTextStroke:"2px #fff",color:"transparent",display:"block",animation:"fadeIn 0.5s ease both 0.1s"}}>TRANQUI,</span>
+              <span style={{color:"#ff3b3b",display:"block",animation:"fadeIn 0.5s ease both 0.3s"}}>CHACHO</span>
+            </h2>
+
+            {/* Body */}
+            <p style={{margin:"0 0 28px",fontSize:13,color:"rgba(255,255,255,0.45)",lineHeight:1.6,maxWidth:280,animation:"fadeIn 0.5s ease both 0.5s"}}>
+              Deslizaste las {total} pelis en VO. Cuando llegue una nueva en los proximos 14 dias, te la enseñamos al momento.
             </p>
+
+            {/* CTA: Ver todas */}
+            <button onClick={resetAll} style={{
+              width:"100%",maxWidth:280,padding:"14px 20px",borderRadius:12,
+              background:"#ff3b3b",border:"none",
+              color:"#000",fontSize:14,fontWeight:800,
+              fontFamily:"'Archivo Black',sans-serif",
+              cursor:"pointer",textTransform:"uppercase",
+              letterSpacing:"0.02em",marginBottom:12,
+              animation:"fadeIn 0.5s ease both 0.6s",
+            }}>
+              Ver todas otra vez
+            </button>
+
+            {/* CTA: Jugar */}
+            <p style={{margin:"0 0 8px",fontSize:12,color:"rgba(255,255,255,0.25)",animation:"fadeIn 0.5s ease both 0.8s"}}>
+              Mientras tanto...
+            </p>
+            <button onClick={() => setShowGame(true)} style={{
+              width:"100%",maxWidth:280,padding:"12px 20px",borderRadius:12,
+              background:"rgba(255,255,255,0.06)",
+              border:"1px solid rgba(255,255,255,0.1)",
+              color:"rgba(255,255,255,0.6)",fontSize:13,fontWeight:600,
+              fontFamily:"inherit",cursor:"pointer",
+              animation:"fadeIn 0.5s ease both 0.9s",
+            }}>
+              🎮 Echale una partida
+            </button>
+          </div>
+        )}
+
+        {/* Brick Breaker game */}
+        {!loading && !error && remaining.length === 0 && movies.length > 0 && showGame && (
+          <div style={{flex:1,display:"flex",flexDirection:"column",padding:"0 4px",minHeight:0,animation:"fadeIn 0.3s ease"}}>
+            <BrickBreaker user={user} onClose={() => setShowGame(false)} />
           </div>
         )}
 

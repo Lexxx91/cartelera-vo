@@ -87,7 +87,7 @@ export default function FriendDetailSheet({
         {/* Friends of friend */}
         <div style={{marginBottom:24}}>
           <p style={{margin:"0 0 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.1em"}}>
-            Amigos de {friendName.split(" ")[0]}
+            Invitados de {friendName.split(" ")[0]}
           </p>
 
           {loadingFof ? (

@@ -261,6 +261,7 @@ export default function CarteleraApp({ user, onLogout }) {
             myVotes={myVotes}
             friendVotes={friendVotes}
             onSwipe={handleSwipe}
+            user={user}
           />
         )}
         {tab === "amigos" && (
