@@ -22,11 +22,11 @@ mkdirSync(SPLASH_DIR, { recursive: true });
 
 // ── SVG Template: Standard Icon ─────────────────────────────────────────
 function logoSvg(size, { maskable = false } = {}) {
-  // For maskable icons, use 80% safe zone (text smaller, more padding)
-  const fontSize = maskable ? size * 0.28 : size * 0.36;
+  // Smaller text, well centered with generous padding
+  const fontSize = maskable ? size * 0.2 : size * 0.24;
   const cx = size / 2;
-  const cy = size / 2 + fontSize * 0.12; // slight vertical adjustment for caps baseline
-  const rx = maskable ? 0 : size * 0.15; // rounded corners for standard icons
+  const cy = size / 2 + fontSize * 0.08; // slight vertical adjustment for caps baseline
+  const rx = maskable ? 0 : size * 0.18; // rounded corners for standard icons
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" fill="#000000" rx="${rx}" ry="${rx}"/>
