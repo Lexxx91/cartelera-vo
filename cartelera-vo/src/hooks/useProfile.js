@@ -201,24 +201,22 @@ export default function useProfile(user) {
 
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min
 
-    // Save token in Supabase
-    const { error } = await supabase.from('whatsapp_link_tokens').insert({
+    // Open WhatsApp FIRST — must be synchronous with user gesture
+    // (mobile browsers block window.open/location.href after await)
+    const waUrl = `https://wa.me/${WA_BOT_NUMBER}?text=vose-${token}`
+    window.location.href = waUrl
+
+    // Start polling immediately (user will come back from WhatsApp)
+    setWaLinking(true)
+
+    // Save token in Supabase (fire-and-forget, user already navigating to WA)
+    supabase.from('whatsapp_link_tokens').insert({
       token,
       user_id: user.id,
       expires_at: expiresAt,
+    }).then(({ error }) => {
+      if (error) console.error('Token generation failed:', error)
     })
-
-    if (error) {
-      console.error('Token generation failed:', error)
-      return
-    }
-
-    // Start polling for whatsapp_jid to appear
-    setWaLinking(true)
-
-    // Open WhatsApp with pre-filled message
-    const waUrl = `https://wa.me/${WA_BOT_NUMBER}?text=vose-${token}`
-    window.open(waUrl, '_blank')
   }, [user])
 
   // Poll for whatsapp_jid when linking is in progress
