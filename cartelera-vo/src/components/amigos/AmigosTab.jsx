@@ -558,20 +558,16 @@ export default function AmigosTab({
         {subTab === "amigos" && (
           <div style={{padding:"16px 20px"}}>
             {friends.length === 0 ? (
-              <div style={{textAlign:"center",padding:"32px 16px",animation:"fadeIn 0.4s ease"}}>
-                <p style={{fontSize:32,margin:"0 0 10px"}}>🍿</p>
-                <p style={{margin:"0 0 16px",fontSize:13,color:"rgba(255,255,255,0.4)",lineHeight:1.5}}>
-                  Aun no tienes amigos en VOSE. Invitalos para hacer planes de cine juntos.
+              <div style={{textAlign:"center",padding:"24px 24px 20px",animation:"fadeIn 0.6s ease"}}>
+                <p style={{fontSize:36,margin:"0 0 8px"}}>🍿</p>
+                <h3 style={{margin:"0 0 6px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:20,lineHeight:1,textTransform:"uppercase",letterSpacing:"-0.02em"}}>
+                  <span style={{WebkitTextStroke:"1px #fff",color:"transparent"}}>SIN AMIGOS </span>
+                  <span style={{color:"#ff3b3b"}}>NO HAY SWIPE</span>
+                </h3>
+                <p style={{color:"rgba(255,255,255,0.35)",fontSize:12,margin:"10px auto 16px",lineHeight:1.5,maxWidth:240}}>
+                  Invita a tus amigos para hacer planes de cine juntos.
                 </p>
-                <button onClick={handleShareInvite} style={{
-                  padding:"12px 24px",borderRadius:14,
-                  background:"#ff3b3b",border:"none",
-                  color:"#000",fontSize:13,fontWeight:800,
-                  fontFamily:"'Archivo Black',sans-serif",
-                  cursor:"pointer",textTransform:"uppercase",
-                  letterSpacing:"0.02em",
-                  display:"inline-flex",alignItems:"center",gap:8,
-                }}>
+                <button onClick={handleShareInvite} style={{padding:"10px 20px",borderRadius:12,background:"#ff3b3b",border:"none",color:"#000",fontSize:12,fontWeight:800,fontFamily:"'Archivo Black',sans-serif",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.02em",display:"inline-flex",alignItems:"center",gap:8}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
