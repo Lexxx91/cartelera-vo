@@ -257,9 +257,9 @@ export default function AmigosTab({
       )}
 
       {/* ═══════════════════════════════════════════ */}
-      {/* ZONA A: PLANES (top, scrollable)            */}
+      {/* SINGLE SCROLL CONTAINER                      */}
       {/* ═══════════════════════════════════════════ */}
-      <div style={{flexShrink:0,maxHeight:"55vh",overflowY:"auto",overflowX:"hidden",paddingBottom:12}}>
+      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"0 0 100px",minHeight:0}}>
 
         {/* Header */}
         <div style={{padding:"18px 20px 14px",flexShrink:0}}>
@@ -464,13 +464,13 @@ export default function AmigosTab({
         {/* Quieren ver — horizontal poster scroll */}
         {friendSuggestions.length > 0 && (
           <div style={{marginBottom:12}}>
-            <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Quieren ver</p>
+            <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Tus amigos quieren ver</p>
             <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
               {friendSuggestions.map(({ movieTitle, voters }) => {
                 const poster = getPoster(movieTitle)
                 return (
-                  <div key={movieTitle} style={{flexShrink:0,width:120,position:"relative"}}>
-                    <div style={{width:120,height:180,borderRadius:14,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)",marginBottom:8}}>
+                  <div key={movieTitle} onClick={() => onVoyInline(movieTitle)} style={{flexShrink:0,width:120,position:"relative",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                    <div style={{width:120,height:180,borderRadius:14,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
                       {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
                       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%)"}} />
                       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"8px 10px"}}>
@@ -488,9 +488,6 @@ export default function AmigosTab({
                         ))}
                       </div>
                     </div>
-                    <button onClick={() => onVoyInline(movieTitle)} style={{width:"100%",padding:"8px 0",borderRadius:8,background:"rgba(255,59,59,0.1)",border:"1px solid rgba(255,59,59,0.2)",color:"#ff3b3b",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                      VOY
-                    </button>
                   </div>
                 )
               })}
@@ -513,54 +510,49 @@ export default function AmigosTab({
           </div>
         )}
 
-      </div>
 
-      {/* ═══════════════════════════════════════════ */}
-      {/* SUB-TAB BAR                                 */}
-      {/* ═══════════════════════════════════════════ */}
-      <div style={{
-        display:"flex", padding:"0", gap:0,
-        borderTop:"1px solid rgba(255,255,255,0.06)",
-        borderBottom:"1px solid rgba(255,255,255,0.06)",
-        flexShrink:0, background:"rgba(0,0,0,0.3)",
-        marginTop:4,
-      }}>
-        {[
-          { id: "amigos", label: "Amigos", count: friends.length },
-          { id: "personas", label: "Personas en VOSE" },
-          { id: "pendientes", label: "Pendientes", count: pendingTotal },
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
-            flex:1, padding:"12px 0", background:"none", border:"none",
-            borderBottom: subTab === tab.id ? "2px solid #ff3b3b" : "2px solid transparent",
-            color: subTab === tab.id ? "#fff" : "rgba(255,255,255,0.35)",
-            fontSize:11, fontWeight:400, fontFamily:"'Archivo Black',sans-serif",
-            textTransform:"uppercase", letterSpacing:"0.04em",
-            cursor:"pointer", transition:"all 0.2s",
-            position:"relative",
-            WebkitTapHighlightColor:"transparent",
-          }}>
-            {tab.label}
-            {/* Badge for pendientes */}
-            {tab.id === "pendientes" && pendingIn.length > 0 && (
-              <span style={{
-                position:"absolute", top:6, right:"15%",
-                width:16, height:16, borderRadius:"50%",
-                background:"#ff3b3b", color:"#fff",
-                fontSize:9, fontWeight:800,
-                display:"flex", alignItems:"center", justifyContent:"center",
-              }}>
-                {pendingIn.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* ZONA B: SUB-TAB CONTENT (bottom, scrollable) */}
-      {/* ═══════════════════════════════════════════ */}
-      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"0 0 100px",minHeight:0}}>
+        {/* ═══════════════════════════════════════════ */}
+        {/* SUB-TAB BAR (sticky)                        */}
+        {/* ═══════════════════════════════════════════ */}
+        <div style={{
+          display:"flex", padding:"0", gap:0,
+          borderTop:"1px solid rgba(255,255,255,0.06)",
+          borderBottom:"1px solid rgba(255,255,255,0.06)",
+          background:"#000",
+          marginTop:4,
+          position:"sticky", top:0, zIndex:10,
+        }}>
+          {[
+            { id: "amigos", label: "Amigos", count: friends.length },
+            { id: "personas", label: "Personas en VOSE" },
+            { id: "pendientes", label: "Pendientes", count: pendingTotal },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
+              flex:1, padding:"12px 0", background:"none", border:"none",
+              borderBottom: subTab === tab.id ? "2px solid #ff3b3b" : "2px solid transparent",
+              color: subTab === tab.id ? "#fff" : "rgba(255,255,255,0.35)",
+              fontSize:11, fontWeight:400, fontFamily:"'Archivo Black',sans-serif",
+              textTransform:"uppercase", letterSpacing:"0.04em",
+              cursor:"pointer", transition:"all 0.2s",
+              position:"relative",
+              WebkitTapHighlightColor:"transparent",
+            }}>
+              {tab.label}
+              {/* Badge for pendientes */}
+              {tab.id === "pendientes" && pendingIn.length > 0 && (
+                <span style={{
+                  position:"absolute", top:6, right:"15%",
+                  width:16, height:16, borderRadius:"50%",
+                  background:"#ff3b3b", color:"#fff",
+                  fontSize:9, fontWeight:800,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}>
+                  {pendingIn.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
         {/* ─── SUB-TAB: AMIGOS ─── */}
         {subTab === "amigos" && (
