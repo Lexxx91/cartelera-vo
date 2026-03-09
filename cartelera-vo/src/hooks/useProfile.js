@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabase.js'
+
+// WhatsApp bot number — the number where users send the link token
+const WA_BOT_NUMBER = '34609962190'
 
 export default function useProfile(user) {
   const [profile, setProfile] = useState(null)
@@ -168,5 +171,88 @@ export default function useProfile(user) {
     return publicUrl
   }
 
-  return { profile, loading, updateProfile, uploadAvatar, inviteeCount }
+  // ═══════════════════════════════════════════════════
+  // WhatsApp Linking
+  // ═══════════════════════════════════════════════════
+
+  const [waLinking, setWaLinking] = useState(false) // true while waiting for link
+  const waPollingRef = useRef(null)
+
+  // Generate a short token, save it, and open wa.me with pre-filled message
+  const generateWhatsAppToken = useCallback(async () => {
+    if (!user || user.isDemo) return
+
+    // Generate short alphanumeric token (8 chars)
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      .map(b => b.toString(36).padStart(2, '0'))
+      .join('')
+      .slice(0, 8)
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min
+
+    // Save token in Supabase
+    const { error } = await supabase.from('whatsapp_link_tokens').insert({
+      token,
+      user_id: user.id,
+      expires_at: expiresAt,
+    })
+
+    if (error) {
+      console.error('Token generation failed:', error)
+      return
+    }
+
+    // Start polling for whatsapp_jid to appear
+    setWaLinking(true)
+
+    // Open WhatsApp with pre-filled message
+    const waUrl = `https://wa.me/${WA_BOT_NUMBER}?text=vose-${token}`
+    window.open(waUrl, '_blank')
+  }, [user])
+
+  // Poll for whatsapp_jid when linking is in progress
+  useEffect(() => {
+    if (!waLinking || !user || user.isDemo) return
+
+    waPollingRef.current = setInterval(async () => {
+      const { data } = await supabase
+        .from('perfiles')
+        .select('whatsapp_jid')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (data?.whatsapp_jid) {
+        setProfile(p => ({ ...p, whatsapp_jid: data.whatsapp_jid }))
+        setWaLinking(false)
+        clearInterval(waPollingRef.current)
+      }
+    }, 2000)
+
+    // Stop polling after 10 min (token expiry)
+    const timeout = setTimeout(() => {
+      setWaLinking(false)
+      clearInterval(waPollingRef.current)
+    }, 10 * 60 * 1000)
+
+    return () => {
+      clearInterval(waPollingRef.current)
+      clearTimeout(timeout)
+    }
+  }, [waLinking, user])
+
+  // Unlink WhatsApp
+  async function unlinkWhatsApp() {
+    if (!user || user.isDemo) return
+    await supabase.from('perfiles').update({
+      whatsapp_jid: null,
+      whatsapp_linked_at: null,
+    }).eq('id', user.id)
+    setProfile(p => ({ ...p, whatsapp_jid: null, whatsapp_linked_at: null }))
+  }
+
+  return {
+    profile, loading, updateProfile, uploadAvatar, inviteeCount,
+    // WhatsApp
+    generateWhatsAppToken, unlinkWhatsApp, waLinking,
+  }
 }

@@ -138,18 +138,16 @@ export default function usePlans(user, friends) {
 
     await supabase.from("planes").update(update).eq("id", planId)
 
-    // SIMULATION: if partner hasn't responded, simulate their YES after 2-3s
-    if (!theirResponse) {
+    // SIMULATION (demo only): if partner hasn't responded, simulate their YES after 2-3s
+    if (user.isDemo && !theirResponse) {
       const otherField = amIInitiator ? 'partner_response' : 'initiator_response'
       setTimeout(async () => {
-        // Re-check the plan state
         const { data: current } = await supabase
           .from("planes")
           .select("*")
           .eq("id", planId)
           .single()
         if (current && !current[otherField]) {
-          // Simulate: partner says YES
           await supabase.from("planes").update({
             [otherField]: 'yes',
             state: 'confirmed',
@@ -195,25 +193,27 @@ export default function usePlans(user, friends) {
       [availField]: sessions,
     }).eq("id", planId)
 
-    // SIMULATION: partner picks the first option after 2-3s
-    setTimeout(async () => {
-      const { data: current } = await supabase
-        .from("planes")
-        .select("*")
-        .eq("id", planId)
-        .single()
+    // SIMULATION (demo only): partner picks the first option after 2-3s
+    if (user.isDemo) {
+      setTimeout(async () => {
+        const { data: current } = await supabase
+          .from("planes")
+          .select("*")
+          .eq("id", planId)
+          .single()
 
-      if (current && !current.chosen_session) {
-        const avail = amIInitiator ? current.initiator_availability : current.partner_availability
-        if (avail && avail.length > 0) {
-          await supabase.from("planes").update({
-            chosen_session: avail[0],
-            state: 'confirmed',
-          }).eq("id", planId)
-          fetchPlans()
+        if (current && !current.chosen_session) {
+          const avail = amIInitiator ? current.initiator_availability : current.partner_availability
+          if (avail && avail.length > 0) {
+            await supabase.from("planes").update({
+              chosen_session: avail[0],
+              state: 'confirmed',
+            }).eq("id", planId)
+            fetchPlans()
+          }
         }
-      }
-    }, 2000 + Math.random() * 1000)
+      }, 2000 + Math.random() * 1000)
+    }
 
     await fetchPlans()
   }

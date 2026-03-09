@@ -30,7 +30,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [confirmedOverlay, setConfirmedOverlay] = useState(null)
 
   // Initialize hooks
-  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount } = useProfile(user)
+  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking } = useProfile(user)
   const { friends: realFriends, pendingIn, pendingOut, acceptRequest, removeFriend, getFriendsOfFriend, sendDirectRequest, discoverUsers } = useFriends(user)
   const realVotes = useVotes(user, realFriends)
   const realPlans = usePlans(user, realFriends)
@@ -390,6 +390,9 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             campaignOverrides={campaignOverrides}
             onSaveCampaignOverride={saveCampaignOverride}
             campaignsLoading={campaignsLoading}
+            onConnectWhatsApp={generateWhatsAppToken}
+            onUnlinkWhatsApp={unlinkWhatsApp}
+            waLinking={waLinking}
           />
         )}
       </div>
