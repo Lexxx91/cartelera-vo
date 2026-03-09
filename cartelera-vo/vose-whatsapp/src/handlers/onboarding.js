@@ -36,8 +36,8 @@ export async function handleOnboarding(sock, jid, token) {
   // Invalid or already used token
   if (!tokenRow) {
     await sendText(sock, jid,
-      'Ese codigo no es valido o ya ha caducado. 🤷\n' +
-      'Genera uno nuevo desde tu perfil en VOSE.\n\n' +
+      'Ese código está más muerto que el grupo de WhatsApp después de organizar un plan. 🪦\n\n' +
+      'Genera uno nuevo desde tu perfil en VOSE.\n' +
       '👉 cartelera-vo.vercel.app'
     )
     return
@@ -49,8 +49,9 @@ export async function handleOnboarding(sock, jid, token) {
     await supabase.from('whatsapp_link_tokens').update({ used: true }).eq('token', token)
 
     await sendText(sock, jid,
-      'Ese codigo ha caducado (10 min). ⏰\n' +
-      'Genera uno nuevo desde tu perfil en VOSE.'
+      'Chacho, 10 minutos tenías y se fueron como las entradas de un preestreno. ⏰\n\n' +
+      'Genera otro código desde tu perfil en VOSE.\n' +
+      '👉 cartelera-vo.vercel.app'
     )
     return
   }
@@ -61,8 +62,8 @@ export async function handleOnboarding(sock, jid, token) {
     await supabase.from('whatsapp_link_tokens').update({ used: true }).eq('token', token)
 
     await sendText(sock, jid,
-      `Ya estamos conectados, ${existingProfile.nombre_display}! 😄\n` +
-      'Te avisare cuando tengas matches o planes nuevos. 🎬'
+      `${existingProfile.nombre_display}, bro, que ya estamos conectaos! 😄\n\n` +
+      'Tranqui que cuando haya match o plan te enteras por aquí antes que por el grupo. 🎬'
     )
     return
   }
@@ -86,7 +87,8 @@ export async function handleOnboarding(sock, jid, token) {
   if (error) {
     console.error('❌ Link error:', error)
     await sendText(sock, jid,
-      'Ups, algo fallo al vincular. Intenta de nuevo desde la app. 😅'
+      'Fos, algo petó. Como la web del Monopol un viernes. 😅\n\n' +
+      'Inténtalo otra vez desde la app, anda.'
     )
     return
   }
@@ -107,9 +109,8 @@ export async function handleOnboarding(sock, jid, token) {
 
   // 8. Welcome message!
   await sendText(sock, jid,
-    `Eyyy ${name}! 🎬\n\n` +
-    'Aqui tu asistente de cine en VOSE.\n' +
-    'Cuando tengas match, te aviso por aqui.\n\n' +
-    'Ahora ve y desliza, anda. 🍿'
+    `Ayy chacha, ${name}! 🎬\n\n` +
+    'Ya estamos conectaos. Cuando tu gente y tú deslicéis la misma peli, te aviso por aquí antes de que nadie mande un audio de 4 minutos.\n\n' +
+    'Ahora ve y swipea, bro. 🍿'
   )
 }

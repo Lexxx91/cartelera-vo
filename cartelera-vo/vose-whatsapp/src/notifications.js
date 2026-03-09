@@ -69,10 +69,10 @@ export async function handlePlanChange(sock, payload) {
       const initiatorName = initiator?.nombre_display || 'Alguien'
       const session = formatSession(plan.proposed_session)
       await sendText(sock, partner.whatsapp_jid,
-        `Match con ${initiatorName}! 🎬\n\n` +
-        `Los dos quereis ver *${plan.movie_title}*.\n` +
+        `CHACHO. Match con ${initiatorName}! 🎬\n\n` +
+        `Los dos queréis ver *${plan.movie_title}*. Como cuando tu madre dice "mira, Armiche también va p'allá".\n\n` +
         `${session}\n\n` +
-        `Aceptas? 👉 ${APP_URL}`
+        `¿Te apuntas? 👉 ${APP_URL}`
       )
     }
     return
@@ -93,10 +93,9 @@ export async function handlePlanChange(sock, payload) {
         const user = await getJid(userId)
         if (user?.whatsapp_jid) {
           await sendText(sock, user.whatsapp_jid,
-            `Plan confirmado ✓\n\n` +
-            `*${plan.movie_title}*\n` +
-            `${session}\n\n` +
-            `🍿 Nos vemos ahi!`
+            `Plan cerrao, bro ✓\n\n` +
+            `*${plan.movie_title}* · ${session}\n\n` +
+            `🍿 Nos vemos ahí. Sin audios. Sin dramas. Solo cine.`
           )
         }
       }
@@ -119,8 +118,8 @@ export async function handlePlanChange(sock, payload) {
     if (other?.whatsapp_jid) {
       const name = whoSaidNoProfile?.nombre_display || 'Tu amigo'
       await sendText(sock, other.whatsapp_jid,
-        `${name} no puede ese dia para *${plan.movie_title}*.\n\n` +
-        `Abre VOSE para compartir tu disponibilidad 👉 ${APP_URL}`
+        `${name} no puede ese día para *${plan.movie_title}*. No te lo tomes personal, la vida. 🤷\n\n` +
+        `Abre VOSE y comparte tu disponibilidad 👉 ${APP_URL}`
       )
     }
     return
@@ -143,8 +142,8 @@ export async function handlePlanChange(sock, payload) {
     if (receiver?.whatsapp_jid) {
       const name = sender?.nombre_display || 'Tu amigo'
       await sendText(sock, receiver.whatsapp_jid,
-        `${name} te ha mandado ${avail.length} opciones de horario para *${plan.movie_title}*.\n\n` +
-        `Elige la que mejor te venga 👉 ${APP_URL}`
+        `${name} te ha mandao ${avail.length} opciones de horario para *${plan.movie_title}*. Sin audio de 3 minutos, solo opciones limpias. 🙌\n\n` +
+        `Elige la tuya 👉 ${APP_URL}`
       )
     }
     return
@@ -160,10 +159,9 @@ export async function handlePlanChange(sock, payload) {
       const user = await getJid(userId)
       if (user?.whatsapp_jid) {
         await sendText(sock, user.whatsapp_jid,
-          `Plan cerrado ✓\n\n` +
-          `*${plan.movie_title}*\n` +
-          `${session}\n\n` +
-          `Nos vemos ahi 🎬`
+          `Plan cerrao, bro ✓\n\n` +
+          `*${plan.movie_title}* · ${session}\n\n` +
+          `Menos logística que explicarle a un peninsular qué es una guagua. 🎬`
         )
       }
     }
@@ -176,8 +174,8 @@ export async function handlePlanChange(sock, payload) {
       const user = await getJid(userId)
       if (user?.whatsapp_jid) {
         await sendText(sock, user.whatsapp_jid,
-          `No hay fechas en comun para *${plan.movie_title}*. 😔\n\n` +
-          `Quiza la semana que viene.`
+          `No hay fechas en común para *${plan.movie_title}*. 😔\n\n` +
+          `Como 6 colegas queriendo ir al cine un lunes. Quizá la semana que viene.`
         )
       }
     }
@@ -193,11 +191,11 @@ export async function handlePlanChange(sock, payload) {
         const isThePayer = user.nombre_display === plan.payer_name
         if (isThePayer) {
           await sendText(sock, user.whatsapp_jid,
-            `🎰 La ruleta ha hablado!\n\nTe toca comprar las entradas 😄`
+            `🎰 La ruleta ha hablao!\n\nTe toca comprar las entradas, bro. ¿Y qué hago, mi niño? Pues pasar por caja. 😄`
           )
         } else {
           await sendText(sock, user.whatsapp_jid,
-            `🎰 A *${plan.payer_name}* le toca comprar las entradas.\n\nAhora a esperar. 🍿`
+            `🎰 A *${plan.payer_name}* le toca soltar la pasta por las entradas.\n\nTú relax. Palomitas y a esperar. 🍿`
           )
         }
       }
@@ -221,8 +219,8 @@ export async function handlePlanChange(sock, payload) {
         const existing = await getJid(existingId)
         if (existing?.whatsapp_jid) {
           await sendText(sock, existing.whatsapp_jid,
-            `${newName} se ha apuntado al plan de *${plan.movie_title}*. 🙌\n\n` +
-            `Ya sois ${plan.participants.length}.`
+            `${newName} se ha apuntao al plan de *${plan.movie_title}*. 🙌\n\n` +
+            `Ya sois ${plan.participants.length}. El grupo crece como cineros que encuentran VO en Las Palmas.`
           )
         }
       }

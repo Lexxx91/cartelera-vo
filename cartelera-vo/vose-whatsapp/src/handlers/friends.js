@@ -30,8 +30,9 @@ export async function handleFriendChange(sock, payload) {
     if (receiver?.whatsapp_jid) {
       const name = sender?.nombre_display || 'Alguien'
       await sendText(sock, receiver.whatsapp_jid,
-        `${name} quiere agregarte en VOSE. 🎬\n\n` +
-        `Abre la app para aceptar 👉 ${APP_URL}`
+        `${name} quiere ser tu bro en VOSE. 🎬\n\n` +
+        `Más matches, más cine, menos grupos muertos.\n` +
+        `Acepta en la app 👉 ${APP_URL}`
       )
     }
     return
@@ -46,8 +47,8 @@ export async function handleFriendChange(sock, payload) {
     if (requester?.whatsapp_jid) {
       const name = accepter?.nombre_display || 'Tu amigo'
       await sendText(sock, requester.whatsapp_jid,
-        `${name} acepto tu solicitud. 🤝\n\n` +
-        `Ya podeis descubrir pelis en comun. 🎬`
+        `${name} aceptó. 🤝\n\n` +
+        `Ya podéis descubrir pelis en común. Networking nivel Ayaki doblando a Kevin Costner. 🎬`
       )
     }
     return

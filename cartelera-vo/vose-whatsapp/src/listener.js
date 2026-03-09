@@ -62,7 +62,8 @@ async function handleFreeform(sock, jid, text) {
     // Unknown user
     await sendText(sock, jid,
       'Soy el asistente de VOSE 🎬\n\n' +
-      'Para activarme, entra en la app y dale a "Conectar WhatsApp" en tu perfil.\n\n' +
+      '¿Y qué hago, mi niño? Pues de momento nada, que no te conozco.\n\n' +
+      'Entra en la app → "Conectar WhatsApp" en tu perfil, y hablamos.\n' +
       '👉 cartelera-vo.vercel.app'
     )
     return
@@ -70,7 +71,7 @@ async function handleFreeform(sock, jid, text) {
 
   // Known user but no Claude yet — placeholder
   await sendText(sock, jid,
-    `Eyyy ${profile.nombre_display}! Todavia estoy aprendiendo a conversar. ` +
-    `De momento te aviso cuando tengas match o planes nuevos. 🎬🍿`
+    `Eyyy ${profile.nombre_display}! Todavía no sé conversar como bro, estoy aprendiendo. 😅\n\n` +
+    'De momento me lo cargo al hombro y te aviso cuando haya match o plan nuevo. 🎬🍿'
   )
 }
