@@ -59,7 +59,7 @@ export default function MatchPopup({ movie, matchedFriends, user, onSelectSessio
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 500,
-      background: "rgba(0,0,0,0.95)",
+      background: "#000",
       display: "flex", flexDirection: "column", alignItems: "center",
       opacity: show ? 1 : 0,
       transition: "opacity 0.4s ease",
