@@ -9,7 +9,7 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
 
   async function handleValidate() {
     const trimmed = code.trim().toUpperCase()
-    if (!trimmed) { setError('Introduce un codigo de invitacion'); return }
+    if (!trimmed) { setError('Mete un codigo, illo'); return }
 
     setValidating(true)
     setError(null)
@@ -18,9 +18,9 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
       const { data, error: rpcError } = await supabase
         .rpc('validate_invite_code', { p_code: trimmed })
 
-      if (rpcError) { setError('Error de conexion'); setValidating(false); return }
+      if (rpcError) { setError('Sin cobertura, bro. Reintenta.'); setValidating(false); return }
       if (!data) {
-        setError('Codigo no valido')
+        setError('Ese codigo no cuela 🤷')
         setShaking(true)
         setTimeout(() => setShaking(false), 500)
         setValidating(false)
@@ -31,7 +31,7 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
       localStorage.setItem('vose_invite_code', trimmed)
       onCodeValidated(trimmed)
     } catch {
-      setError('Error al verificar')
+      setError('Algo fallo. Dale otra vez.')
       setValidating(false)
     }
   }
@@ -44,20 +44,38 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
       alignItems: 'center', justifyContent: 'center',
       padding: '0 32px',
     }}>
-      {/* VOSE logo */}
-      <h1 style={{
-        margin: '0 0 8px', fontSize: 36, fontWeight: 400,
-        letterSpacing: '0.02em',
-        fontFamily: "'Archivo Black', sans-serif",
-        textTransform: 'uppercase',
+      {/* Hero headline — branding canario */}
+      <div style={{
+        textAlign: 'center', marginBottom: 8,
+        animation: 'fadeInUp 0.6s ease both',
       }}>
-        VO<span style={{ color: '#ff3b3b' }}>SE</span>
-      </h1>
+        <p style={{
+          margin: 0,
+          fontFamily: "'Archivo Black', sans-serif",
+          fontWeight: 400,
+          fontSize: 38, lineHeight: 0.95,
+          letterSpacing: '-0.02em',
+          WebkitTextStroke: '1.5px #fff',
+          color: 'transparent',
+        }}>
+          ESPERA,
+        </p>
+        <p style={{
+          margin: '2px 0',
+          fontFamily: "'Archivo Black', sans-serif",
+          fontWeight: 400,
+          fontSize: 38, lineHeight: 0.95,
+          letterSpacing: '-0.02em',
+          color: '#ff3b3b',
+        }}>
+          CHACHO
+        </p>
+      </div>
 
       {/* User info */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        marginBottom: 32, animation: 'fadeIn 0.5s ease',
+        marginBottom: 28, animation: 'fadeIn 0.5s ease both 0.2s',
       }}>
         {user?.user_metadata?.avatar_url && (
           <img src={user.user_metadata.avatar_url} alt=""
@@ -72,20 +90,20 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
       {/* Gate card */}
       <div style={{
         width: '100%', maxWidth: 300,
-        animation: 'fadeInUp 0.5s ease both 0.1s',
+        animation: 'fadeInUp 0.5s ease both 0.15s',
       }}>
         <p style={{
-          margin: '0 0 6px', fontSize: 16, fontWeight: 700,
-          color: '#fff', textAlign: 'center',
+          margin: '0 0 6px', fontSize: 15, fontWeight: 600,
+          color: 'rgba(255,255,255,0.7)', textAlign: 'center',
         }}>
-          Codigo de invitacion
+          Esto es solo pa los elegidos 🎬
         </p>
         <p style={{
           margin: '0 0 20px', fontSize: 13,
-          color: 'rgba(255,255,255,0.35)', textAlign: 'center',
+          color: 'rgba(255,255,255,0.3)', textAlign: 'center',
           lineHeight: 1.5,
         }}>
-          Necesitas un codigo para entrar. Pidele uno a alguien que ya este en VOSE.
+          Pega el codigo que te paso tu compadre y ya estas dentro.
         </p>
 
         {/* Code input */}
@@ -139,7 +157,7 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
               Verificando...
             </>
           ) : (
-            'Entrar'
+            'Vamos pa dentro'
           )}
         </button>
 
@@ -164,7 +182,7 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
             textAlign: 'center',
           }}
         >
-          Usar otra cuenta
+          No soy yo, cambia de cuenta
         </button>
       </div>
 
