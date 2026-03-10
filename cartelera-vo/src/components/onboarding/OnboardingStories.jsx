@@ -146,6 +146,14 @@ export default function OnboardingStories({ onComplete, onConnectWhatsApp }) {
           from { opacity:1; }
           to { opacity:0; }
         }
+        @keyframes glowGreen {
+          0%, 100% { box-shadow: 0 0 20px rgba(37,211,102,0.3); }
+          50% { box-shadow: 0 0 40px rgba(37,211,102,0.6); }
+        }
+        @keyframes goStale {
+          from { filter: grayscale(0) brightness(1); border-color: rgba(37,211,102,0.3); }
+          to { filter: grayscale(1) brightness(0.4); border-color: rgba(255,255,255,0.06); }
+        }
       `}</style>
 
       {/* Progress bar */}
@@ -240,10 +248,8 @@ function StorySwipe() {
         <div style={{
           position: "absolute", left: 20, top: "50%", transform: "translateY(-50%) rotate(-12deg)",
           fontSize: 28, fontWeight: 900, fontFamily: "'Archivo Black',sans-serif",
-          color: "#ff453a", opacity: 0,
+          color: "#ff453a",
           border: "3px solid #ff453a", borderRadius: 8, padding: "4px 14px",
-          animation: "swipeDemo 4s ease-in-out infinite",
-          animationDelay: "0s",
         }}>
           PASO
         </div>
@@ -523,75 +529,152 @@ function StoryNoPingPong() {
 /* STORY 4: VOCITO                        */
 /* ═══════════════════════════════════════ */
 function StoryVocito({ onConnect, onSkip }) {
-  const features = [
-    { emoji: "🎬", text: "Nuevas pelis VOSE al instante" },
-    { emoji: "🤝", text: "Avisos de match con amigos" },
-    { emoji: "📅", text: "Gestion de disponibilidad automatica" },
+  // Phase 2 delays (after Phase 1 fades at 5.3s)
+  const waBubbles = [
+    { text: "🎬 Ey! Dune 3 en VOSE ya esta en cartelera", delay: 6.5 },
+    { text: "🤝 Match! Tu y Guaci quereis ver lo mismo", delay: 7.1 },
+    { text: "✅ Plan cerrado. Vie 20:30 Monopol", delay: 7.7 },
   ]
 
   return (
     <div style={{ textAlign: "center", width: "100%" }}>
-      {/* VOCITO avatar */}
-      <div style={{
-        width: 80, height: 80, borderRadius: 26,
-        background: "#e8e4df",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        margin: "0 auto 16px",
-        border: "3px solid rgba(255,255,255,0.15)",
-        overflow: "hidden",
-        animation: "scaleBounce 0.5s ease-out 0.2s both, float 3s ease-in-out 0.7s infinite",
-      }}>
-        <img src="/vocito-avatar.png" alt="VOCITO" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      </div>
+      <div style={{ position: "relative", width: "100%" }}>
 
-      <h1 style={{
-        margin: "0 0 4px", fontFamily: "'Archivo Black',sans-serif",
-        fontWeight: 400, fontSize: 36, color: "#fff",
-        textTransform: "uppercase", letterSpacing: "0.02em",
-        animation: "fadeInUp 0.4s ease-out 0.4s both",
-      }}>
-        VOCITO
-      </h1>
-      <p style={{
-        margin: "0 0 24px", fontSize: 14, color: "rgba(255,255,255,0.5)",
-        animation: "fadeInUp 0.4s ease-out 0.6s both",
-      }}>
-        Tu asistente de cine en WhatsApp
-      </p>
-
-      {/* Value proposition */}
-      <p style={{
-        margin: "0 0 20px", fontSize: 13, color: "rgba(255,255,255,0.5)",
-        lineHeight: 1.6,
-        animation: "fadeInUp 0.4s ease-out 0.8s both",
-      }}>
-        Te aviso en tiempo real de nuevas pelis en VOSE en Las Palmas, cuando hagas match con un amigo, y gestiono tu disponibilidad por ti.
-      </p>
-
-      {/* Feature bullets */}
-      <div style={{
-        display: "flex", flexDirection: "column", gap: 8,
-        marginBottom: 28, textAlign: "left",
-      }}>
-        {features.map((f, i) => (
-          <div key={i} style={{
-            display: "flex", alignItems: "center", gap: 10,
-            background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "10px 14px",
-            animation: `fadeInUp 0.4s ease-out ${1 + i * 0.2}s both`,
+        {/* ── PHASE 2: CON VOCITO (in flow, defines height) ── */}
+        <div style={{ width: "100%" }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 22,
+            background: "#e8e4df",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 12px",
+            border: "3px solid rgba(37,211,102,0.3)",
+            overflow: "hidden",
+            animation: "scaleBounce 0.5s ease-out 5.8s both, glowGreen 2s ease-in-out 6.3s infinite",
           }}>
-            <span style={{ fontSize: 18 }}>{f.emoji}</span>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>{f.text}</span>
+            <img src="/vocito-avatar.png" alt="VOCITO" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
-        ))}
+
+          <h2 style={{
+            margin: "0 0 16px",
+            fontFamily: "'Archivo Black',sans-serif",
+            fontWeight: 400, fontSize: 28,
+            color: "#fff", textTransform: "uppercase",
+            letterSpacing: "0.02em",
+            animation: "fadeInUp 0.4s ease-out 6.0s both",
+          }}>
+            CON VOCITO
+          </h2>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
+            {waBubbles.map((b, i) => (
+              <div key={i} style={{
+                background: "rgba(37,211,102,0.12)",
+                border: "1px solid rgba(37,211,102,0.25)",
+                borderRadius: 14, borderTopLeftRadius: 4,
+                padding: "10px 14px",
+                animation: `chatBubbleIn 0.3s ease-out ${b.delay}s both`,
+              }}>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
+                  {b.text}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <p style={{
+            margin: "16px 0 0", fontSize: 15, fontWeight: 700,
+            color: "#25d366",
+            animation: "fadeInUp 0.4s ease-out 8.3s both",
+          }}>
+            Sin abrir la app.
+          </p>
+        </div>
+
+        {/* ── PHASE 1: THE MISSED NOTIFICATION (absolute overlay) ── */}
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          animation: "fadeOut 0.5s ease-out 5.3s forwards",
+          pointerEvents: "none",
+        }}>
+          {/* Notification card — looks like a real WhatsApp notification */}
+          <div style={{
+            width: "100%", borderRadius: 16,
+            background: "rgba(37,211,102,0.08)",
+            border: "1px solid rgba(37,211,102,0.3)",
+            padding: "16px",
+            textAlign: "left",
+            animation: "chatBubbleIn 0.5s ease-out 0.3s both, goStale 0.8s ease-out 2.0s forwards",
+          }}>
+            {/* Notification header */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 12,
+                background: "#e8e4df", overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                <img src="/vocito-avatar.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>Vocito</span>
+              </div>
+              {/* Timestamp that changes from "ahora" to "hace 3 dias" */}
+              <span style={{
+                fontSize: 11, color: "rgba(37,211,102,0.6)", fontWeight: 500,
+                animation: "fadeOut 0.3s ease-out 2.0s forwards",
+              }}>
+                ahora
+              </span>
+              <span style={{
+                fontSize: 11, color: "rgba(255,59,59,0.5)", fontWeight: 500,
+                position: "absolute", right: 16, top: 19,
+                animation: "fadeInUp 0.3s ease-out 2.3s both",
+              }}>
+                hace 3 dias
+              </span>
+            </div>
+
+            {/* Notification body */}
+            <p style={{
+              margin: 0, fontSize: 15, color: "rgba(255,255,255,0.8)",
+              lineHeight: 1.5, fontWeight: 500,
+            }}>
+              🎬 Dune 3 en VOSE acaba de llegar a Las Palmas
+            </p>
+          </div>
+
+          {/* Social FOMO line — appears after notification goes stale */}
+          <p style={{
+            margin: "20px 0 0", fontSize: 14, color: "rgba(255,255,255,0.35)",
+            animation: "fadeInUp 0.4s ease-out 2.8s both",
+          }}>
+            Guaci ya fue a verla 🍿
+          </p>
+
+          {/* Gut punch */}
+          <p style={{
+            margin: "8px 0 0",
+            fontFamily: "'Archivo Black',sans-serif",
+            fontSize: 20, fontWeight: 400, color: "rgba(255,255,255,0.2)",
+            textTransform: "uppercase", letterSpacing: "0.05em",
+            animation: "fadeInUp 0.4s ease-out 3.2s both",
+          }}>
+            Nadie te aviso.
+          </p>
+        </div>
       </div>
 
-      {/* CTA buttons */}
+      {/* ── CTAs ── */}
       <div
         onPointerDown={e => e.stopPropagation()}
         onPointerUp={e => e.stopPropagation()}
         style={{
           display: "flex", flexDirection: "column", gap: 10,
-          animation: "fadeInUp 0.4s ease-out 1.8s both",
+          marginTop: 24,
+          animation: "fadeInUp 0.4s ease-out 8.7s both",
         }}
       >
         <button onClick={onConnect} style={{
@@ -614,7 +697,7 @@ function StoryVocito({ onConnect, onSkip }) {
           cursor: "pointer", fontFamily: "inherit",
           WebkitTapHighlightColor: "transparent",
         }}>
-          Empezar sin asistente
+          Prefiero enterarme solo
         </button>
       </div>
     </div>
