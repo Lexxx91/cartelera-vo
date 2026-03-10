@@ -250,6 +250,7 @@ function StorySwipe() {
           fontSize: 28, fontWeight: 900, fontFamily: "'Archivo Black',sans-serif",
           color: "#ff453a",
           border: "3px solid #ff453a", borderRadius: 8, padding: "4px 14px",
+          zIndex: 10,
         }}>
           PASO
         </div>
@@ -287,6 +288,7 @@ function StorySwipe() {
           fontSize: 28, fontWeight: 900, fontFamily: "'Archivo Black',sans-serif",
           color: "#34c759",
           border: "3px solid #34c759", borderRadius: 8, padding: "4px 14px",
+          zIndex: 10,
         }}>
           VOY
         </div>
