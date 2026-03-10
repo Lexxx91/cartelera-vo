@@ -9,7 +9,7 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
 
   async function handleValidate() {
     const trimmed = code.trim().toUpperCase()
-    if (!trimmed) { setError('Mete un codigo, illo'); return }
+    if (!trimmed) { setError('Mete un codigo, muyayo'); return }
 
     setValidating(true)
     setError(null)
@@ -103,7 +103,7 @@ export default function InviteCodeGate({ user, onCodeValidated, onLogout }) {
           color: 'rgba(255,255,255,0.3)', textAlign: 'center',
           lineHeight: 1.5,
         }}>
-          Pega el codigo que te paso tu compadre y ya estas dentro.
+          Pega el codigo que te paso tu amigo y ya estas dentro.
         </p>
 
         {/* Code input */}

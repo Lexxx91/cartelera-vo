@@ -28,11 +28,13 @@ export default function App() {
     if (planId) setPendingPlanJoin(planId)
 
     // Invite code deep link — save BEFORE Google redirect so it's available after
+    // Guard: only treat as invite code if short alphanumeric (not a long OAuth PKCE code)
     const urlCode = params.get('code')
-    if (urlCode) localStorage.setItem('vose_invite_code', urlCode.trim().toUpperCase())
+    const isInviteCode = urlCode && /^[A-Z0-9]{4,12}$/i.test(urlCode.trim())
+    if (isInviteCode) localStorage.setItem('vose_invite_code', urlCode.trim().toUpperCase())
 
-    // Clean URL params
-    if (planId || urlCode) {
+    // Clean URL params (but NOT if it's an OAuth code — let Supabase handle it)
+    if (planId || isInviteCode) {
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
