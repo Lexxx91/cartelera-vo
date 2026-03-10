@@ -47,7 +47,13 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       // Reset gate when session changes (login/logout)
-      if (!session) setGate('loading')
+      if (!session) {
+        setGate('loading')
+        // Clear user-specific state to prevent leaking between accounts
+        localStorage.removeItem('vose_onboarding_done')    // legacy key cleanup
+        localStorage.removeItem('vose_vocito_sheet_shown')  // legacy key cleanup
+        localStorage.removeItem('vose_has_account')
+      }
     })
     return () => subscription.unsubscribe()
   }, [])

@@ -104,14 +104,13 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     setTab("amigos")
   }, [pendingPlanJoin])
 
-  // Check if onboarding is needed (new users only)
+  // Check if onboarding is needed (new users + demo mode)
   useEffect(() => {
-    if (!profile || isDemoMode) return
-    const localDone = localStorage.getItem('vose_onboarding_done')
-    if (!localDone && !profile.onboarding_done) {
+    if (!profile) return
+    if (!profile.onboarding_done) {
       setShowOnboarding(true)
     }
-  }, [profile, isDemoMode])
+  }, [profile])
 
   // VOCITO sheet: wait for matchPopup to close before showing
   useEffect(() => {
@@ -131,7 +130,6 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
 
   function handleOnboardingComplete() {
     setShowOnboarding(false)
-    localStorage.setItem('vose_onboarding_done', 'true')
     updateProfile({ onboarding_done: true })
   }
 
@@ -169,9 +167,10 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     }
 
     // Trigger VOCITO sheet after first swipe (if WA not connected)
-    if (!profile?.whatsapp_jid && !isDemoMode) {
-      if (!localStorage.getItem('vose_vocito_sheet_shown')) {
-        localStorage.setItem('vose_vocito_sheet_shown', 'true')
+    if (!profile?.whatsapp_jid && !isDemoMode && profile?.id) {
+      const vocitoKey = `vose_vocito_sheet_shown_${profile.id}`
+      if (!localStorage.getItem(vocitoKey)) {
+        localStorage.setItem(vocitoKey, 'true')
         setVocitoSheetPending(true)
       }
     }
