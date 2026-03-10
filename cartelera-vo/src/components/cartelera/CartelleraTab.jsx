@@ -130,7 +130,7 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
 
         {!loading && !error && remaining.length > 0 && (
           <>
-            <div style={{position:"relative",height:"min(480px, 65vh)",overflow:"visible"}}>
+            <div style={{position:"relative",height:"min(560px, 75vh)",overflow:"visible"}}>
               {stackCards.map((movie, si) => (
                 <SwipeCard
                   key={movie.title}
@@ -143,18 +143,6 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
               ))}
             </div>
 
-            {/* Action buttons */}
-            <div style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",gap:20,padding:"10px 0 14px"}}>
-              <button onClick={()=>handleSwipe('paso')} style={{width:64,height:64,borderRadius:"50%",background:"rgba(255,69,58,0.12)",border:"2px solid rgba(255,69,58,0.4)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,transition:"all 0.2s"}}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#ff453a" strokeWidth="2.5" strokeLinecap="round"/></svg>
-              </button>
-              <button onClick={handleUndo} disabled={history.length===0} style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",cursor:history.length>0?"pointer":"not-allowed",fontSize:16,opacity:history.length>0?1:0.3,transition:"all 0.2s"}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 14L4 9l5-5M4 9h11a6 6 0 010 12h-1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-              <button onClick={()=>handleSwipe('voy')} style={{width:64,height:64,borderRadius:"50%",background:"rgba(255,59,59,0.12)",border:"2px solid rgba(255,59,59,0.4)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,transition:"all 0.2s"}}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#ff3b3b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            </div>
           </>
         )}
       </div>
