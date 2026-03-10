@@ -35,7 +35,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [vocitoSheetPending, setVocitoSheetPending] = useState(false)
 
   // Initialize hooks
-  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking } = useProfile(user)
+  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink } = useProfile(user)
   const { friends: realFriends, pendingIn, pendingOut, acceptRequest, removeFriend, getFriendsOfFriend, sendDirectRequest, discoverUsers } = useFriends(user)
   const realVotes = useVotes(user, realFriends)
   const realPlans = usePlans(user, realFriends)
@@ -439,6 +439,8 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onConnectWhatsApp={generateWhatsAppToken}
             onUnlinkWhatsApp={unlinkWhatsApp}
             waLinking={waLinking}
+            waLinkError={waLinkError}
+            onRetryWhatsApp={retryWhatsAppLink}
             whatsappLinked={!!profile?.whatsapp_jid}
           />
         )}
@@ -460,6 +462,8 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onConnectWhatsApp={generateWhatsAppToken}
             onUnlinkWhatsApp={unlinkWhatsApp}
             waLinking={waLinking}
+            waLinkError={waLinkError}
+            onRetryWhatsApp={retryWhatsAppLink}
           />
         )}
       </div>

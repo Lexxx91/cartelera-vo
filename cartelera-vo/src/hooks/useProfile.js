@@ -39,6 +39,18 @@ export default function useProfile(user) {
         setProfile(data)
         localStorage.setItem('vose_has_account', 'true')
       } else {
+        // New user — only create profile if they came through the invite flow
+        const storedCode = localStorage.getItem('vose_invite_code')
+        if (!storedCode) {
+          // No invite code → user was deleted or bypassing invite system
+          // Sign them out and clear stale flags
+          console.warn('Profile not found and no invite code — signing out')
+          localStorage.removeItem('vose_has_account')
+          setLoading(false)
+          supabase.auth.signOut()
+          return
+        }
+
         // Create profile on first login
         const newProfile = {
           id: user.id,
@@ -50,22 +62,25 @@ export default function useProfile(user) {
           alerts: [],
         }
 
-        // Check if user was invited (invite code stored at login)
-        const storedCode = localStorage.getItem('vose_invite_code')
-        if (storedCode) {
-          // Find who owns this invite code
-          const { data: inviter } = await supabase
-            .from("perfiles")
-            .select("id")
-            .eq("invite_code", storedCode.toUpperCase())
-            .maybeSingle()
-          if (inviter) {
-            newProfile.invited_by = inviter.id
-          }
-          localStorage.removeItem('vose_invite_code')
+        // Find who owns this invite code
+        const { data: inviter } = await supabase
+          .from("perfiles")
+          .select("id")
+          .eq("invite_code", storedCode.toUpperCase())
+          .maybeSingle()
+        if (inviter) {
+          newProfile.invited_by = inviter.id
         }
+        localStorage.removeItem('vose_invite_code')
 
-        await supabase.from("perfiles").insert(newProfile)
+        const { error: insertError } = await supabase.from("perfiles").insert(newProfile)
+        if (insertError) {
+          console.error('Profile creation failed:', insertError)
+          localStorage.removeItem('vose_has_account')
+          setLoading(false)
+          supabase.auth.signOut()
+          return
+        }
         setProfile(newProfile)
       }
       setLoading(false)
@@ -187,11 +202,15 @@ export default function useProfile(user) {
   // ═══════════════════════════════════════════════════
 
   const [waLinking, setWaLinking] = useState(false) // true while waiting for link
+  const [waLinkError, setWaLinkError] = useState(null) // error message after timeout
   const waPollingRef = useRef(null)
 
   // Generate a short token, save it, and open wa.me with pre-filled message
   const generateWhatsAppToken = useCallback(async () => {
     if (!user || user.isDemo) return
+
+    // Clear any previous error
+    setWaLinkError(null)
 
     // Generate short alphanumeric token (8 chars)
     const token = Array.from(crypto.getRandomValues(new Uint8Array(6)))
@@ -224,6 +243,8 @@ export default function useProfile(user) {
   useEffect(() => {
     if (!waLinking || !user || user.isDemo) return
 
+    const startTime = Date.now()
+
     waPollingRef.current = setInterval(async () => {
       const { data } = await supabase
         .from('perfiles')
@@ -234,15 +255,24 @@ export default function useProfile(user) {
       if (data?.whatsapp_jid) {
         setProfile(p => ({ ...p, whatsapp_jid: data.whatsapp_jid }))
         setWaLinking(false)
+        setWaLinkError(null)
         clearInterval(waPollingRef.current)
+        return
       }
-    }, 2000)
 
-    // Stop polling after 10 min (token expiry)
+      // Show hint after 45 seconds — bot might not be responding
+      const elapsed = Date.now() - startTime
+      if (elapsed > 45_000 && !waLinkError) {
+        setWaLinkError('slow')
+      }
+    }, 3000)
+
+    // Stop polling after 2 min and show error
     const timeout = setTimeout(() => {
       setWaLinking(false)
+      setWaLinkError('timeout')
       clearInterval(waPollingRef.current)
-    }, 10 * 60 * 1000)
+    }, 2 * 60 * 1000)
 
     return () => {
       clearInterval(waPollingRef.current)
@@ -260,9 +290,15 @@ export default function useProfile(user) {
     setProfile(p => ({ ...p, whatsapp_jid: null, whatsapp_linked_at: null }))
   }
 
+  // Retry WhatsApp linking (clears error, restarts polling)
+  const retryWhatsAppLink = useCallback(() => {
+    setWaLinkError(null)
+    setWaLinking(true)
+  }, [])
+
   return {
     profile, loading, updateProfile, uploadAvatar, inviteeCount,
     // WhatsApp
-    generateWhatsAppToken, unlinkWhatsApp, waLinking,
+    generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink,
   }
 }

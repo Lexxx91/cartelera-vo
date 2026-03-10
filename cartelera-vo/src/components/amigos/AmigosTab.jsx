@@ -126,6 +126,8 @@ export default function AmigosTab({
   onConnectWhatsApp,
   onUnlinkWhatsApp,
   waLinking,
+  waLinkError,
+  onRetryWhatsApp,
   whatsappLinked,
 }) {
   const [activePlan, setActivePlan] = useState(null)

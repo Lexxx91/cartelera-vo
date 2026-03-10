@@ -1,4 +1,4 @@
-export default function VocitoCard({ isLinked, waLinking, onConnect, onUnlink, compact = false }) {
+export default function VocitoCard({ isLinked, waLinking, waLinkError, onConnect, onUnlink, onRetry, compact = false }) {
   // VOCITO avatar component
   const VocitoAvatar = ({ size = 48 }) => (
     <div style={{
@@ -88,6 +88,45 @@ export default function VocitoCard({ isLinked, waLinking, onConnect, onUnlink, c
     )
   }
 
+  // State: Linking timed out
+  if (waLinkError === 'timeout') {
+    return (
+      <div style={{ padding: "0 20px", marginBottom: 20 }}>
+        <div style={{
+          background: "rgba(255,59,59,0.06)",
+          border: "1px solid rgba(255,59,59,0.2)",
+          borderRadius: 20, padding: "24px 18px",
+          textAlign: "center",
+        }}>
+          <VocitoAvatar size={56} />
+          <p style={{ margin: "14px 0 6px", fontSize: 15, fontWeight: 600, color: "#ff3b3b" }}>
+            VOCITO no ha respondido
+          </p>
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>
+            Puede que el servicio este temporalmente no disponible.
+            <br />Intentalo de nuevo mas tarde.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onRetry} style={{
+              flex: 1, padding: "12px 0", borderRadius: 12, border: "none",
+              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)",
+              fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+            }}>
+              Reintentar
+            </button>
+            <button onClick={onConnect} style={{
+              flex: 1, padding: "12px 0", borderRadius: 12, border: "none",
+              background: "#25d366", color: "#fff",
+              fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+            }}>
+              Reenviar mensaje
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // State: Linking in progress
   if (waLinking) {
     return (
@@ -107,11 +146,13 @@ export default function VocitoCard({ isLinked, waLinking, onConnect, onUnlink, c
             animation: "spin 1s linear infinite",
           }} />
           <p style={{ margin: "14px 0 6px", fontSize: 15, fontWeight: 600, color: "#fff" }}>
-            Esperando mensaje...
+            {waLinkError === 'slow' ? 'Aun esperando...' : 'Esperando mensaje...'}
           </p>
           <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>
-            Envia el mensaje en WhatsApp y vuelve aqui.
-            <br />Se vinculara automaticamente.
+            {waLinkError === 'slow'
+              ? <>VOCITO esta tardando en responder.<br />Asegurate de haber enviado el mensaje.</>
+              : <>Envia el mensaje en WhatsApp y vuelve aqui.<br />Se vinculara automaticamente.</>
+            }
           </p>
         </div>
       </div>
