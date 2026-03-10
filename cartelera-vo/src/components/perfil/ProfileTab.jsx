@@ -44,8 +44,15 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   }
 
   function saveName() {
+    const trimmed = displayName.trim()
+    if (!trimmed || trimmed.length > 40) {
+      setDisplayName(profile?.nombre_display || 'Cinefilo')
+      setEditingName(false)
+      return
+    }
     setEditingName(false)
-    if (onUpdateProfile) onUpdateProfile({ nombre_display: displayName })
+    setDisplayName(trimmed)
+    if (onUpdateProfile) onUpdateProfile({ nombre_display: trimmed })
   }
 
   function copyCode() {

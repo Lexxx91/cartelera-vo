@@ -79,12 +79,38 @@ function RatingPicker({ onRate }) {
   )
 }
 
+// Time ago helper
+function timeAgo(dateStr) {
+  if (!dateStr) return null
+  const diff = Date.now() - new Date(dateStr).getTime()
+  if (diff < 0) return null
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "hace un momento"
+  if (mins < 60) return `hace ${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `hace ${hrs}h`
+  const days = Math.floor(hrs / 24)
+  return `hace ${days}d`
+}
+
 export default function PlanSheet({ plan, myState, partnerName, onRespondYes, onRespondNo, onSendAvailability, onPickSession, onRejectAll, onClose, user, friends, onSavePayer, posterUrl, onShare, onSaveRating, onLeavePlan }) {
   const [allSessions, setAllSessions] = useState([])
   const [myAvail, setMyAvail] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [showRoulette, setShowRoulette] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
   const sheetRef = useRef(null)
+  const prevStateRef = useRef(myState)
+
+  // Celebration when plan gets confirmed
+  useEffect(() => {
+    if (prevStateRef.current !== 'confirmed' && myState === 'confirmed') {
+      setShowCelebration(true)
+      navigator.vibrate?.([20, 50, 20, 50, 20])
+      setTimeout(() => setShowCelebration(false), 3000)
+    }
+    prevStateRef.current = myState
+  }, [myState])
 
   // Scroll sheet to top when showing roulette
   useEffect(() => {
@@ -154,6 +180,28 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
       overflow: "hidden",
       animation: "fadeIn 0.3s ease",
     }}>
+      {/* Celebration confetti */}
+      {showCelebration && (
+        <>
+          <style>{`
+            @keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+          `}</style>
+          <div style={{ position: "absolute", inset: 0, zIndex: 300, pointerEvents: "none", overflow: "hidden" }}>
+            {Array.from({ length: 24 }).map((_, i) => (
+              <div key={i} style={{
+                position: "absolute",
+                left: `${Math.random() * 100}%`,
+                top: 0,
+                width: Math.random() * 8 + 4,
+                height: Math.random() * 8 + 4,
+                borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+                background: ["#ff3b3b", "#ffd60a", "#34c759", "#4fc3f7", "#ff9500", "#fff"][i % 6],
+                animation: `confettiFall ${1.5 + Math.random() * 2}s ease-in ${Math.random() * 0.5}s forwards`,
+              }} />
+            ))}
+          </div>
+        </>
+      )}
       {/* Poster background */}
       {posterUrl && (
         <img src={posterUrl} alt="" style={{
@@ -323,7 +371,10 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
           <div style={{textAlign:"center",padding:"32px 0"}}>
             <p style={{fontSize:40,margin:"0 0 14px"}}>⏳</p>
             <p style={{fontSize:15,fontWeight:600,color:"#fff",margin:"0 0 6px"}}>Esperando a {partnerName}...</p>
-            <p style={{fontSize:13,color:"rgba(255,255,255,0.35)",margin:0}}>Le hemos enviado la propuesta. Te avisaremos cuando responda.</p>
+            <p style={{fontSize:13,color:"rgba(255,255,255,0.35)",margin:"0 0 12px"}}>Le hemos enviado la propuesta. Te avisaremos cuando responda.</p>
+            {plan.updated_at && timeAgo(plan.updated_at) && (
+              <p style={{fontSize:11,color:"rgba(255,255,255,0.15)",margin:0}}>Actualizado {timeAgo(plan.updated_at)}</p>
+            )}
           </div>
         )}
 
@@ -372,7 +423,10 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
           <div style={{textAlign:"center",padding:"32px 0"}}>
             <p style={{fontSize:40,margin:"0 0 14px"}}>⏳</p>
             <p style={{fontSize:15,fontWeight:600,color:"#fff",margin:"0 0 6px"}}>Esperando a {partnerName}...</p>
-            <p style={{fontSize:13,color:"rgba(255,255,255,0.35)",margin:0}}>Le hemos enviado tus fechas. {partnerName.split(" ")[0]} elegira la que mejor le venga.</p>
+            <p style={{fontSize:13,color:"rgba(255,255,255,0.35)",margin:"0 0 12px"}}>Le hemos enviado tus fechas. {partnerName.split(" ")[0]} elegira la que mejor le venga.</p>
+            {plan.updated_at && timeAgo(plan.updated_at) && (
+              <p style={{fontSize:11,color:"rgba(255,255,255,0.15)",margin:0}}>Actualizado {timeAgo(plan.updated_at)}</p>
+            )}
           </div>
         )}
 

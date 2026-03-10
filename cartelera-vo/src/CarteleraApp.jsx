@@ -38,7 +38,16 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink } = useProfile(user)
   const { friends: realFriends, pendingIn, pendingOut, acceptRequest, removeFriend, getFriendsOfFriend, sendDirectRequest, discoverUsers } = useFriends(user)
   const realVotes = useVotes(user, realFriends)
-  const realPlans = usePlans(user, realFriends)
+  const realPlans = usePlans(user, realFriends, {
+    onPlanStateChange: (plan, prevState, newState) => {
+      const partnerName = plan.partner?.nombre_display || plan.partner?.nombre || "Tu amigo"
+      if (newState === 'confirmed') {
+        addToast({ type: "match", emoji: "🎉", title: "¡Plan confirmado!", body: `${plan.movie_title} con ${partnerName}` })
+      } else if (newState === 'proposed' || newState === 'pick_theirs') {
+        addToast({ type: "info", emoji: "📬", title: `${partnerName} ha respondido`, body: plan.movie_title })
+      }
+    }
+  })
   const { movies, loading: moviesLoading, error: moviesError } = useMovies()
 
   // PWA install detection
@@ -146,12 +155,16 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
       }
     } else {
       // Real: write to Supabase
-      const result = await realVotes.vote(movie.title, direction)
-      if (direction === 'voy') {
-        addToast({ type: "vote", emoji: "🎟️", title: "Voto registrado", body: `"${movie.title}"` })
-        if (result && result.length > 0) {
-          setMatchPopup({ movie, matchedFriends: result })
+      try {
+        const result = await realVotes.vote(movie.title, direction)
+        if (direction === 'voy') {
+          addToast({ type: "vote", emoji: "🎟️", title: "Voto registrado", body: `"${movie.title}"` })
+          if (result && result.length > 0) {
+            setMatchPopup({ movie, matchedFriends: result })
+          }
         }
+      } catch (err) {
+        addToast({ type: "error", emoji: "⚠️", title: "Error al votar", body: "Revisa tu conexion" })
       }
     }
 
@@ -210,10 +223,14 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
         }
       }
     } else {
-      const result = await realVotes.vote(movieTitle, 'voy')
-      addToast({ type: "vote", emoji: "🎟️", title: "VOY", body: `"${movieTitle}"` })
-      if (result && result.length > 0 && movie) {
-        setMatchPopup({ movie, matchedFriends: result })
+      try {
+        const result = await realVotes.vote(movieTitle, 'voy')
+        addToast({ type: "vote", emoji: "🎟️", title: "VOY", body: `"${movieTitle}"` })
+        if (result && result.length > 0 && movie) {
+          setMatchPopup({ movie, matchedFriends: result })
+        }
+      } catch (err) {
+        addToast({ type: "error", emoji: "⚠️", title: "Error al votar", body: "Revisa tu conexion" })
       }
     }
   }
@@ -249,6 +266,8 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     const result = await sendDirectRequest(targetId)
     if (result.success) {
       addToast({ type: "friend", emoji: "👋", title: "Solicitud enviada", body: `A ${result.name}` })
+    } else if (result.error) {
+      addToast({ type: "info", emoji: "ℹ️", title: "Info", body: result.error })
     }
     return result
   }
@@ -397,6 +416,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onSwipe={handleSwipe}
             user={user}
             campaignOverrides={campaignOverrides}
+            onUndoVote={(title) => !isDemoMode && realVotes.removeVote(title)}
           />
         )}
         {tab === "amigos" && (

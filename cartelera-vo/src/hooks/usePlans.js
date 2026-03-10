@@ -2,40 +2,69 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabase.js'
 import { getAllSessionsForMovie, findNearestSession } from '../utils.js'
 
-export default function usePlans(user, friends) {
+export default function usePlans(user, friends, { onPlanStateChange } = {}) {
   const [plans, setPlans] = useState([])   // all plans I'm involved in
   const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
 
+  const fetchingRef = useRef(false)
+  const prevPlansRef = useRef([])
+
   const fetchPlans = useCallback(async () => {
-    if (!user) return
+    if (!user || fetchingRef.current) return
     // Demo mode — no Supabase, plans managed locally in useDemo
     if (user.isDemo) { setLoading(false); return }
 
-    const { data: rows } = await supabase
-      .from("planes")
-      .select("*")
-      .or(`initiator_id.eq.${user.id},partner_id.eq.${user.id},participants.cs.{${user.id}}`)
-      .order("updated_at", { ascending: false })
+    fetchingRef.current = true
+    try {
+      const { data: rows } = await supabase
+        .from("planes")
+        .select("*")
+        .or(`initiator_id.eq.${user.id},partner_id.eq.${user.id},participants.cs.{${user.id}}`)
+        .order("updated_at", { ascending: false })
 
-    if (rows) {
-      // Enrich with friend profile data
-      const enriched = rows.map(plan => {
-        const partnerId = plan.initiator_id === user.id ? plan.partner_id : plan.initiator_id
-        const partner = friends.find(f => f.id === partnerId) || { id: partnerId, nombre: "Amigo" }
-        const amIInitiator = plan.initiator_id === user.id
-        return { ...plan, partner, amIInitiator }
-      })
-      setPlans(enriched)
+      if (rows) {
+        // Enrich with friend profile data
+        const enriched = rows.map(plan => {
+          const partnerId = plan.initiator_id === user.id ? plan.partner_id : plan.initiator_id
+          const partner = friends.find(f => f.id === partnerId) || { id: partnerId, nombre: "Amigo" }
+          const amIInitiator = plan.initiator_id === user.id
+          return { ...plan, partner, amIInitiator }
+        })
+        // Detect state transitions for notifications
+        if (onPlanStateChange && prevPlansRef.current.length > 0) {
+          enriched.forEach(plan => {
+            const prev = prevPlansRef.current.find(p => p.id === plan.id)
+            if (prev) {
+              const prevState = getMyState(prev)
+              const newState = getMyState(plan)
+              if (prevState !== newState && newState) {
+                onPlanStateChange(plan, prevState, newState)
+              }
+            }
+          })
+        }
+        prevPlansRef.current = enriched
+        setPlans(enriched)
+      }
+
+      setLoading(false)
+    } finally {
+      fetchingRef.current = false
     }
-
-    setLoading(false)
   }, [user, friends])
 
   useEffect(() => {
     fetchPlans()
-    pollRef.current = setInterval(fetchPlans, 4000)
-    return () => clearInterval(pollRef.current)
+    const startPolling = () => { pollRef.current = setInterval(fetchPlans, 5000) }
+    const stopPolling = () => clearInterval(pollRef.current)
+    const handleVisibility = () => {
+      if (document.hidden) stopPolling()
+      else { fetchPlans(); startPolling() }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    startPolling()
+    return () => { stopPolling(); document.removeEventListener('visibilitychange', handleVisibility) }
   }, [fetchPlans])
 
   // Create a new plan after match detection
@@ -122,7 +151,7 @@ export default function usePlans(user, friends) {
   // Respond YES to the proposed session
   async function respondYes(planId) {
     const plan = plans.find(p => p.id === planId)
-    if (!plan) return
+    if (!plan || plan.state === 'confirmed' || plan.state === 'no_match') return
 
     const amIInitiator = plan.initiator_id === user.id
     const responseField = amIInitiator ? 'initiator_response' : 'partner_response'
@@ -137,38 +166,16 @@ export default function usePlans(user, friends) {
     }
 
     await supabase.from("planes").update(update).eq("id", planId)
-
-    // SIMULATION (demo only): if partner hasn't responded, simulate their YES after 2-3s
-    if (user.isDemo && !theirResponse) {
-      const otherField = amIInitiator ? 'partner_response' : 'initiator_response'
-      setTimeout(async () => {
-        const { data: current } = await supabase
-          .from("planes")
-          .select("*")
-          .eq("id", planId)
-          .single()
-        if (current && !current[otherField]) {
-          await supabase.from("planes").update({
-            [otherField]: 'yes',
-            state: 'confirmed',
-            chosen_session: current.proposed_session,
-          }).eq("id", planId)
-          fetchPlans()
-        }
-      }, 2000 + Math.random() * 1000)
-    }
-
     await fetchPlans()
   }
 
   // Respond NO to the proposed session
   async function respondNo(planId) {
     const plan = plans.find(p => p.id === planId)
-    if (!plan) return
+    if (!plan || plan.state === 'confirmed' || plan.state === 'no_match') return
 
     const amIInitiator = plan.initiator_id === user.id
     const responseField = amIInitiator ? 'initiator_response' : 'partner_response'
-    const theirResponse = amIInitiator ? plan.partner_response : plan.initiator_response
 
     const update = { [responseField]: 'no' }
 
@@ -183,43 +190,24 @@ export default function usePlans(user, friends) {
 
   // Send my availability (list of sessions I can attend)
   async function sendAvailability(planId, sessions) {
+    if (!sessions || !Array.isArray(sessions) || sessions.length === 0) return
     const plan = plans.find(p => p.id === planId)
     if (!plan) return
 
     const amIInitiator = plan.initiator_id === user.id
     const availField = amIInitiator ? 'initiator_availability' : 'partner_availability'
 
-    await supabase.from("planes").update({
+    const { error } = await supabase.from("planes").update({
       [availField]: sessions,
     }).eq("id", planId)
-
-    // SIMULATION (demo only): partner picks the first option after 2-3s
-    if (user.isDemo) {
-      setTimeout(async () => {
-        const { data: current } = await supabase
-          .from("planes")
-          .select("*")
-          .eq("id", planId)
-          .single()
-
-        if (current && !current.chosen_session) {
-          const avail = amIInitiator ? current.initiator_availability : current.partner_availability
-          if (avail && avail.length > 0) {
-            await supabase.from("planes").update({
-              chosen_session: avail[0],
-              state: 'confirmed',
-            }).eq("id", planId)
-            fetchPlans()
-          }
-        }
-      }, 2000 + Math.random() * 1000)
-    }
-
+    if (error) console.error("sendAvailability error:", error)
     await fetchPlans()
   }
 
   // Pick a session from partner's availability
   async function pickSession(planId, session) {
+    const plan = plans.find(p => p.id === planId)
+    if (!plan || plan.state === 'confirmed') return
     await supabase.from("planes").update({
       chosen_session: session,
       state: 'confirmed',
@@ -229,6 +217,8 @@ export default function usePlans(user, friends) {
 
   // Reject all sessions → no_match
   async function rejectAll(planId) {
+    const plan = plans.find(p => p.id === planId)
+    if (!plan || plan.state === 'confirmed' || plan.state === 'no_match') return
     await supabase.from("planes").update({
       state: 'no_match',
     }).eq("id", planId)
@@ -239,13 +229,13 @@ export default function usePlans(user, friends) {
   async function joinPlan(planId) {
     const plan = plans.find(p => p.id === planId)
     if (!plan) {
-      // Might be a plan from friends that we need to fetch
       const { data } = await supabase
         .from("planes")
         .select("*")
         .eq("id", planId)
         .single()
       if (data) {
+        if ((data.participants || []).includes(user.id)) return
         const participants = [...(data.participants || []), user.id]
         await supabase.from("planes").update({ participants }).eq("id", planId)
         await fetchPlans()
@@ -254,6 +244,7 @@ export default function usePlans(user, friends) {
       return
     }
 
+    if ((plan.participants || []).includes(user.id)) return
     const participants = [...(plan.participants || []), user.id]
     await supabase.from("planes").update({ participants }).eq("id", planId)
     await fetchPlans()
@@ -297,9 +288,7 @@ export default function usePlans(user, friends) {
 
     if (!rows) return []
 
-    // Filter: only plans where at least one participant is my friend AND session is in the future
     return rows.filter(plan => {
-      // Exclude past plans
       const session = plan.chosen_session
       if (session?.date && session?.time) {
         const [year, month, day] = session.date.split("-").map(Number)

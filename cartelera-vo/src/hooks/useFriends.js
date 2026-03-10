@@ -7,11 +7,14 @@ export default function useFriends(user) {
   const [pendingOut, setPendingOut] = useState([])    // pending requests FROM me
   const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
+  const fetchingRef = useRef(false)
 
   const fetchFriends = useCallback(async () => {
-    if (!user) return
+    if (!user || fetchingRef.current) return
     // Demo mode — no Supabase, return empty (demo friend injected in CarteleraApp)
     if (user.isDemo) { setLoading(false); return }
+    fetchingRef.current = true
+    try {
 
     // Get all friendships where I'm involved
     const { data: rows } = await supabase
@@ -68,13 +71,23 @@ export default function useFriends(user) {
     })))
 
     setLoading(false)
+    } finally {
+      fetchingRef.current = false
+    }
   }, [user])
 
-  // Initial fetch + poll every 4s
+  // Initial fetch + poll every 8s with visibility optimization
   useEffect(() => {
     fetchFriends()
-    pollRef.current = setInterval(fetchFriends, 4000)
-    return () => clearInterval(pollRef.current)
+    const startPolling = () => { pollRef.current = setInterval(fetchFriends, 8000) }
+    const stopPolling = () => clearInterval(pollRef.current)
+    const handleVisibility = () => {
+      if (document.hidden) stopPolling()
+      else { fetchFriends(); startPolling() }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    startPolling()
+    return () => { stopPolling(); document.removeEventListener('visibilitychange', handleVisibility) }
   }, [fetchFriends])
 
   // Send friend request by invite code
@@ -148,14 +161,14 @@ export default function useFriends(user) {
 
   // Discover other users on the app (for social discovery)
   async function discoverUsers() {
-    if (!user || user.isDemo) return []
+    if (!user || user.isDemo) return { data: [], error: null }
     const { data, error } = await supabase
       .rpc('discover_users', { p_limit: 20 })
     if (error) {
       console.error("discoverUsers error:", error)
-      return []
+      return { data: [], error: "No se pudieron cargar personas" }
     }
-    return data || []
+    return { data: data || [], error: null }
   }
 
   // Send friend request directly by user_id (from friends-of-friends discovery)

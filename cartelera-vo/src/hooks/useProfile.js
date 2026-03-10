@@ -39,15 +39,12 @@ export default function useProfile(user) {
         setProfile(data)
         localStorage.setItem('vose_has_account', 'true')
       } else {
-        // New user — only create profile if they came through the invite flow
+        // No profile yet — check if we have an invite code to create one
         const storedCode = localStorage.getItem('vose_invite_code')
         if (!storedCode) {
-          // No invite code → user was deleted or bypassing invite system
-          // Sign them out and clear stale flags
-          console.warn('Profile not found and no invite code — signing out')
-          localStorage.removeItem('vose_has_account')
+          // No invite code available — App.jsx gate should prevent this,
+          // but as safety: don't create profile, don't sign out
           setLoading(false)
-          supabase.auth.signOut()
           return
         }
 
@@ -71,7 +68,6 @@ export default function useProfile(user) {
         if (inviter) {
           newProfile.invited_by = inviter.id
         }
-        localStorage.removeItem('vose_invite_code')
 
         const { error: insertError } = await supabase.from("perfiles").insert(newProfile)
         if (insertError) {
@@ -81,7 +77,18 @@ export default function useProfile(user) {
           supabase.auth.signOut()
           return
         }
-        setProfile(newProfile)
+
+        // Clear invite code only after successful insert
+        localStorage.removeItem('vose_invite_code')
+        localStorage.setItem('vose_has_account', 'true')
+
+        // Re-fetch profile to get DB-generated fields (invite_code from trigger)
+        const { data: freshProfile } = await supabase
+          .from("perfiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle()
+        setProfile(freshProfile || newProfile)
       }
       setLoading(false)
     })()
@@ -153,9 +160,13 @@ export default function useProfile(user) {
     })
   }
 
-  async function uploadAvatar(file) {
-    if (!user || !file) return { error: 'No user or file' }
+  const uploadingRef = useRef(false)
 
+  async function uploadAvatar(file) {
+    if (!user || !file || uploadingRef.current) return { error: 'No user or file' }
+    uploadingRef.current = true
+
+    try {
     // Demo mode: local preview only
     if (user.isDemo) {
       const url = URL.createObjectURL(file)
@@ -195,6 +206,9 @@ export default function useProfile(user) {
 
     setProfile(p => ({ ...p, avatar_url: publicUrl }))
     return { url: publicUrl }
+    } finally {
+      uploadingRef.current = false
+    }
   }
 
   // ═══════════════════════════════════════════════════

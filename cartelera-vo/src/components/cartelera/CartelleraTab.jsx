@@ -2,7 +2,7 @@ import { useState } from 'react'
 import SwipeCard from './SwipeCard.jsx'
 import BrickBreaker from './BrickBreaker.jsx'
 
-export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe, user, campaignOverrides }) {
+export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe, user, campaignOverrides, onUndoVote }) {
   const [swiped, setSwiped] = useState({})
   const [history, setHistory] = useState([])
   const [showGame, setShowGame] = useState(false)
@@ -28,6 +28,8 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
       return next
     })
     setHistory(prev => prev.slice(0, -1))
+    // Also remove the vote from DB
+    if (onUndoVote) onUndoVote(last)
   }
 
   function resetAll() {

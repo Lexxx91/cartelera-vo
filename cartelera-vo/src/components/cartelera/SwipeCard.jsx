@@ -9,6 +9,7 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
   const [dragX, setDragX] = useState(0)
   const [isExiting, setIsExiting] = useState(null)
   const [posterLoaded, setPosterLoaded] = useState(false)
+  const [posterError, setPosterError] = useState(false)
   const [showTrailer, setShowTrailer] = useState(false)
 
   function onPointerDown(e) {
@@ -19,6 +20,10 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
   function onPointerMove(e) {
     if (!dragRef.current.isDragging) return
     const dx = e.clientX - dragRef.current.startX
+    // Haptic tick when crossing threshold
+    const wasOver = Math.abs(dragRef.current.dragX) >= SWIPE_THRESHOLD
+    const isOver = Math.abs(dx) >= SWIPE_THRESHOLD
+    if (isOver && !wasOver && navigator.vibrate) navigator.vibrate(5)
     dragRef.current.dragX = dx
     setDragX(dx)
   }
@@ -28,6 +33,8 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
     const dx = dragRef.current.dragX
     if (Math.abs(dx) >= SWIPE_THRESHOLD) {
       const dir = dx > 0 ? 'right' : 'left'
+      // Haptic confirmation
+      if (navigator.vibrate) navigator.vibrate(dir === 'right' ? [15, 30, 15] : [10])
       setIsExiting(dir)
       setTimeout(() => onSwipe(dir === 'right' ? 'voy' : 'paso'), 300)
     } else {
@@ -50,11 +57,11 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
   } else if (stackIndex === 0) {
     transform = `translateX(${dragX}px) rotate(${rotation}deg)`
   } else if (stackIndex === 1) {
-    transform = "scale(0.95) translateY(-32px)"; transition = "transform 0.35s cubic-bezier(.4,0,.2,1)"
+    transform = "scale(0.95) translateY(-32px)"; transition = "transform 0.4s cubic-bezier(.34,1.56,.64,1)"
   } else if (stackIndex === 2) {
-    transform = "scale(0.90) translateY(-58px)"; transition = "transform 0.35s cubic-bezier(.4,0,.2,1)"
+    transform = "scale(0.90) translateY(-58px)"; transition = "transform 0.4s cubic-bezier(.34,1.56,.64,1)"
   } else {
-    transform = "scale(0.85) translateY(-82px)"; transition = "transform 0.35s cubic-bezier(.4,0,.2,1)"
+    transform = "scale(0.85) translateY(-82px)"; transition = "transform 0.4s cubic-bezier(.34,1.56,.64,1)"
   }
 
   // Shadow per card for depth
@@ -93,16 +100,18 @@ export default function SwipeCard({ movie, onSwipe, isTop, stackIndex, friendVot
       }}
     >
       {/* Poster */}
-      {movie.poster ? (
+      {movie.poster && !posterError ? (
         <>
           {!posterLoaded && <div style={{position:"absolute",inset:0,background:"#111",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <div style={{width:24,height:24,border:"2px solid rgba(255,255,255,0.1)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}} />
           </div>}
-          <img src={movie.poster} alt={movie.title} onLoad={()=>setPosterLoaded(true)}
+          <img src={movie.poster} alt={movie.title} onLoad={()=>setPosterLoaded(true)} onError={()=>setPosterError(true)}
             style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:posterLoaded?"block":"none"}} />
         </>
       ) : (
-        <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#1a1a1a,#111)"}} />
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#1a1a1a,#111)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <span style={{fontSize:48}}>🎬</span>
+        </div>
       )}
 
       {/* Gradient overlay */}

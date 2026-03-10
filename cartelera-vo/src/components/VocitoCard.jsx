@@ -37,7 +37,7 @@ export default function VocitoCard({ isLinked, waLinking, waLinkError, onConnect
       }}>
         <VocitoAvatar size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "'Archivo Black',sans-serif", fontWeight: 400 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 400, color: "#fff", fontFamily: "'Archivo Black',sans-serif" }}>
             VOCITO
           </p>
           <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
@@ -71,7 +71,7 @@ export default function VocitoCard({ isLinked, waLinking, waLinkError, onConnect
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <VocitoAvatar size={36} />
             <div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "'Archivo Black',sans-serif", fontWeight: 400 }}>
+              <span style={{ fontSize: 14, fontWeight: 400, color: "#fff", fontFamily: "'Archivo Black',sans-serif" }}>
                 VOCITO
               </span>
               <span style={{ fontSize: 11, color: "rgba(37,211,102,0.7)", marginLeft: 8 }}>conectado ✓</span>

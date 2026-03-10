@@ -154,7 +154,14 @@ export default function AmigosTab({
   // Load discoverable users on mount
   useEffect(() => {
     if (onDiscoverUsers) {
-      onDiscoverUsers().then(users => setDiscoverPeople(users || []))
+      onDiscoverUsers().then(result => {
+        // Support both old format (array) and new format ({ data, error })
+        if (Array.isArray(result)) {
+          setDiscoverPeople(result)
+        } else {
+          setDiscoverPeople(result?.data || [])
+        }
+      })
     }
   }, [friends.length]) // refresh when friends change
 

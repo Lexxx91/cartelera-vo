@@ -6,11 +6,14 @@ export default function useVotes(user, friends) {
   const [friendVotes, setFriendVotes] = useState({})   // { movieTitle: [{ userId, name, avatar_url }] }
   const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
+  const fetchingRef = useRef(false)
 
   const fetchVotes = useCallback(async () => {
-    if (!user) return
+    if (!user || fetchingRef.current) return
     // Demo mode — no Supabase, votes managed locally in CarteleraApp
     if (user.isDemo) { setLoading(false); return }
+    fetchingRef.current = true
+    try {
 
     // Get my votes
     const { data: myRows } = await supabase
@@ -53,12 +56,22 @@ export default function useVotes(user, friends) {
     }
 
     setLoading(false)
+    } finally {
+      fetchingRef.current = false
+    }
   }, [user, friends])
 
   useEffect(() => {
     fetchVotes()
-    pollRef.current = setInterval(fetchVotes, 4000)
-    return () => clearInterval(pollRef.current)
+    const startPolling = () => { pollRef.current = setInterval(fetchVotes, 6000) }
+    const stopPolling = () => clearInterval(pollRef.current)
+    const handleVisibility = () => {
+      if (document.hidden) stopPolling()
+      else { fetchVotes(); startPolling() }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    startPolling()
+    return () => { stopPolling(); document.removeEventListener('visibilitychange', handleVisibility) }
   }, [fetchVotes])
 
   // Cast a vote (voy or paso)
@@ -76,7 +89,7 @@ export default function useVotes(user, friends) {
 
     if (error) {
       console.error("Vote error:", error)
-      return null
+      throw new Error('Vote failed: ' + error.message)
     }
 
     setMyVotes(prev => ({ ...prev, [movieTitle]: voteType }))
@@ -133,11 +146,19 @@ export default function useVotes(user, friends) {
     return suggestions
   }
 
+  // Remove a vote (for undo functionality)
+  async function removeVote(movieTitle) {
+    if (!user || user.isDemo) return
+    await supabase.from("votos").delete().eq("user_id", user.id).eq("movie_title", movieTitle)
+    setMyVotes(prev => { const next = {...prev}; delete next[movieTitle]; return next })
+  }
+
   return {
     myVotes,
     friendVotes,
     loading,
     vote,
+    removeVote,
     checkForMatches,
     getFriendSuggestions,
     refresh: fetchVotes,
