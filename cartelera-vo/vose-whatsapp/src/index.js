@@ -16,16 +16,14 @@ import { supabase } from './supabase.js'
 console.log('🎬 VOSE WhatsApp Agent starting...')
 
 async function main() {
-  // 1. Connect to WhatsApp
-  const sock = await connectWhatsApp()
-
-  // 2. Listen for incoming messages (token linking, questions, etc.)
-  setupListener(sock)
-
-  // 3. Subscribe to Supabase Realtime for plan/friend changes
-  setupRealtimeWatcher(sock)
-
-  console.log('✅ VOSE WhatsApp Agent ready')
+  // Connect to WhatsApp with onReady callback
+  // This callback fires on EVERY (re)connection, ensuring
+  // listeners are always attached to the active socket.
+  await connectWhatsApp((sock) => {
+    setupListener(sock)
+    setupRealtimeWatcher(sock)
+    console.log('✅ VOSE WhatsApp Agent ready')
+  })
 }
 
 main().catch(err => {

@@ -29,7 +29,12 @@ const WA_VERSION = [2, 3000, 1034074495]
 let retryCount = 0
 let isPairing = false
 
-export async function connectWhatsApp() {
+/**
+ * Connect to WhatsApp. Accepts an optional onReady callback
+ * that fires on every (re)connection, so listeners can be
+ * re-attached to the new socket.
+ */
+export async function connectWhatsApp(onReady) {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR)
 
   isPairing = !state.creds.registered
@@ -95,6 +100,8 @@ export async function connectWhatsApp() {
       retryCount = 0
       isPairing = false
       console.log('📲 WhatsApp conectado!')
+      // Re-attach listeners on every successful connection
+      if (onReady) onReady(sock)
     }
 
     if (connection === 'close') {
@@ -112,7 +119,7 @@ export async function connectWhatsApp() {
 
         console.log(`🔄 Reconectando en ${Math.round(delay / 1000)}s (${retryCount}/${maxRetries})...`)
         await new Promise(r => setTimeout(r, delay))
-        return connectWhatsApp()
+        return connectWhatsApp(onReady)
       }
 
       if (!shouldReconnect) {

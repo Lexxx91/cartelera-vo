@@ -13,8 +13,17 @@ import { supabase } from './supabase.js'
 import { handlePlanChange } from './notifications.js'
 import { handleFriendChange } from './handlers/friends.js'
 
+let activeChannel = null
+
 export function setupRealtimeWatcher(sock) {
+  // Unsubscribe previous channel on reconnect to avoid duplicates
+  if (activeChannel) {
+    activeChannel.unsubscribe()
+    supabase.removeChannel(activeChannel)
+  }
+
   const channel = supabase.channel('vose-changes')
+  activeChannel = channel
 
   // Watch plan changes
   channel.on(

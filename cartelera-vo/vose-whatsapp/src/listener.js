@@ -15,6 +15,9 @@ import { sendText } from './messaging.js'
 const TOKEN_REGEX = /vose-([a-zA-Z0-9]+)/i
 
 export function setupListener(sock) {
+  // Remove previous listener to avoid duplicates on reconnect
+  sock.ev.removeAllListeners('messages.upsert')
+
   sock.ev.on('messages.upsert', async ({ messages }) => {
     for (const msg of messages) {
       // Ignore: own messages, status broadcasts, non-text
