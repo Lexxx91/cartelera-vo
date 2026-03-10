@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import AdminPanel from './AdminPanel.jsx'
 import VocitoCard from '../VocitoCard.jsx'
 
-export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa, campaignOverrides, onSaveCampaignOverride, isAdmin, campaignsLoading, onConnectWhatsApp, onUnlinkWhatsApp, waLinking, waLinkError, onRetryWhatsApp }) {
+export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa, campaignOverrides, onSaveCampaignOverride, isAdmin, campaignsLoading, onConnectWhatsApp, onUnlinkWhatsApp, waLinking, waLinkError, onRetryWhatsApp, onToggleVocito, onToggleVocitoPref, vocitoState }) {
   const { canInstall, isInstalled, isIOS, isIOSChrome, promptInstall } = pwa || {}
   const [editingName, setEditingName] = useState(false)
   const [displayName, setDisplayName] = useState(profile?.nombre_display || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Cinefilo")
@@ -385,12 +385,16 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
 
         {/* VOCITO — WhatsApp Assistant */}
         <VocitoCard
+          vocitoState={vocitoState}
+          profile={profile}
           isLinked={!!profile?.whatsapp_jid}
           waLinking={waLinking}
           waLinkError={waLinkError}
           onConnect={onConnectWhatsApp}
           onUnlink={onUnlinkWhatsApp}
           onRetry={onRetryWhatsApp}
+          onToggleVocito={onToggleVocito}
+          onTogglePref={onToggleVocitoPref}
         />
 
         {/* Credit card invite */}

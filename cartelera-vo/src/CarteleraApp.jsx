@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 
 // Hooks
-import useProfile from './hooks/useProfile.js'
+import useProfile, { getVocitoState } from './hooks/useProfile.js'
 import useFriends from './hooks/useFriends.js'
 import useVotes from './hooks/useVotes.js'
 import usePlans from './hooks/usePlans.js'
@@ -35,7 +35,8 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [vocitoSheetPending, setVocitoSheetPending] = useState(false)
 
   // Initialize hooks
-  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink } = useProfile(user)
+  const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink, toggleVocito, updateVocitoPrefs } = useProfile(user)
+  const vocitoState = getVocitoState(profile)
   const { friends: realFriends, pendingIn, pendingOut, acceptRequest, removeFriend, getFriendsOfFriend, sendDirectRequest, discoverUsers } = useFriends(user)
   const realVotes = useVotes(user, realFriends)
   const realPlans = usePlans(user, realFriends, {
@@ -483,6 +484,9 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             waLinking={waLinking}
             waLinkError={waLinkError}
             onRetryWhatsApp={retryWhatsAppLink}
+            onToggleVocito={toggleVocito}
+            onToggleVocitoPref={updateVocitoPrefs}
+            vocitoState={vocitoState}
           />
         )}
       </div>

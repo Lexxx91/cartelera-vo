@@ -4,6 +4,16 @@ import { supabase } from '../supabase.js'
 // WhatsApp bot number — the number where users send the link token
 const WA_BOT_NUMBER = '34609962190'
 
+/**
+ * Derive VOCITO state from profile data.
+ * Returns 'active' | 'inactive' | 'never_connected'
+ */
+export function getVocitoState(profile) {
+  if (profile?.vocito_activo === true && profile?.whatsapp_jid) return 'active'
+  if (profile?.vocito_activo === false) return 'inactive'
+  return 'never_connected'
+}
+
 export default function useProfile(user) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -262,12 +272,12 @@ export default function useProfile(user) {
     waPollingRef.current = setInterval(async () => {
       const { data } = await supabase
         .from('perfiles')
-        .select('whatsapp_jid')
+        .select('whatsapp_jid, vocito_activo, vocito_prefs')
         .eq('id', user.id)
         .maybeSingle()
 
       if (data?.whatsapp_jid) {
-        setProfile(p => ({ ...p, whatsapp_jid: data.whatsapp_jid }))
+        setProfile(p => ({ ...p, ...data }))
         setWaLinking(false)
         setWaLinkError(null)
         clearInterval(waPollingRef.current)
@@ -294,14 +304,34 @@ export default function useProfile(user) {
     }
   }, [waLinking, user])
 
-  // Unlink WhatsApp
+  // Unlink WhatsApp — sets vocito_activo=false but preserves prefs
   async function unlinkWhatsApp() {
     if (!user || user.isDemo) return
-    await supabase.from('perfiles').update({
-      whatsapp_jid: null,
-      whatsapp_linked_at: null,
-    }).eq('id', user.id)
-    setProfile(p => ({ ...p, whatsapp_jid: null, whatsapp_linked_at: null }))
+    const patch = { whatsapp_jid: null, whatsapp_linked_at: null, vocito_activo: false }
+    setProfile(p => ({ ...p, ...patch }))
+    await supabase.from('perfiles').update(patch).eq('id', user.id)
+  }
+
+  // Toggle VOCITO on/off (main switch)
+  async function toggleVocito(active) {
+    if (!user || user.isDemo) return
+    if (active && !profile?.whatsapp_jid) {
+      // Need to re-link WhatsApp first — bot will set vocito_activo=true
+      generateWhatsAppToken()
+      return
+    }
+    const patch = { vocito_activo: active }
+    setProfile(p => ({ ...p, ...patch }))
+    await supabase.from('perfiles').update(patch).eq('id', user.id)
+  }
+
+  // Update a single notification category preference
+  async function updateVocitoPrefs(category, enabled) {
+    if (!user || user.isDemo) return
+    const currentPrefs = profile?.vocito_prefs || { planes: true, amigos: true, pelis_vose: true }
+    const newPrefs = { ...currentPrefs, [category]: enabled }
+    setProfile(p => ({ ...p, vocito_prefs: newPrefs }))
+    await supabase.from('perfiles').update({ vocito_prefs: newPrefs }).eq('id', user.id)
   }
 
   // Retry WhatsApp linking (clears error, restarts polling)
@@ -314,5 +344,7 @@ export default function useProfile(user) {
     profile, loading, updateProfile, uploadAvatar, inviteeCount,
     // WhatsApp
     generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink,
+    // VOCITO preferences
+    toggleVocito, updateVocitoPrefs,
   }
 }

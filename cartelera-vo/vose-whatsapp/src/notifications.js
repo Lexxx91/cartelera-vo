@@ -18,22 +18,10 @@
  * ╚═══════════════════════════════════════════════════════════════╝
  */
 
-import { supabase } from './supabase.js'
 import { sendText } from './messaging.js'
+import { getJid, shouldNotify } from './utils.js'
 
 const APP_URL = 'https://cartelera-vo.vercel.app'
-
-/**
- * Get the WhatsApp JID for a user (or null if not linked)
- */
-async function getJid(userId) {
-  const { data } = await supabase
-    .from('perfiles')
-    .select('whatsapp_jid, nombre_display')
-    .eq('id', userId)
-    .maybeSingle()
-  return data
-}
 
 /**
  * Format a session for display: "Lunes 10 Mar a las 18:30 en OCine"
@@ -65,7 +53,7 @@ export async function handlePlanChange(sock, payload) {
     const initiator = await getJid(plan.initiator_id)
     const partner = await getJid(plan.partner_id)
 
-    if (partner?.whatsapp_jid) {
+    if (shouldNotify(partner, 'MATCH')) {
       const initiatorName = initiator?.nombre_display || 'Alguien'
       const session = formatSession(plan.proposed_session)
       await sendText(sock, partner.whatsapp_jid,
@@ -91,7 +79,7 @@ export async function handlePlanChange(sock, payload) {
       const session = formatSession(plan.chosen_session)
       for (const userId of [plan.initiator_id, plan.partner_id]) {
         const user = await getJid(userId)
-        if (user?.whatsapp_jid) {
+        if (shouldNotify(user, 'SESSION_ACCEPTED')) {
           await sendText(sock, user.whatsapp_jid,
             `Plan cerrao, bro ✓\n\n` +
             `*${plan.movie_title}* · ${session}\n\n` +
@@ -115,7 +103,7 @@ export async function handlePlanChange(sock, payload) {
     const whoSaidNoProfile = await getJid(whoSaidNo)
     const other = await getJid(otherId)
 
-    if (other?.whatsapp_jid) {
+    if (shouldNotify(other, 'SESSION_REJECTED')) {
       const name = whoSaidNoProfile?.nombre_display || 'Tu amigo'
       await sendText(sock, other.whatsapp_jid,
         `${name} no puede ese día para *${plan.movie_title}*. No te lo tomes personal, la vida. 🤷\n\n` +
@@ -139,7 +127,7 @@ export async function handlePlanChange(sock, payload) {
     const sender = await getJid(senderId)
     const receiver = await getJid(receiverId)
 
-    if (receiver?.whatsapp_jid) {
+    if (shouldNotify(receiver, 'AVAILABILITY_SENT')) {
       const name = sender?.nombre_display || 'Tu amigo'
       await sendText(sock, receiver.whatsapp_jid,
         `${name} te ha mandao ${avail.length} opciones de horario para *${plan.movie_title}*. Sin audio de 3 minutos, solo opciones limpias. 🙌\n\n` +
@@ -157,7 +145,7 @@ export async function handlePlanChange(sock, payload) {
     // Notify the person who sent availability (the other one picked)
     for (const userId of [plan.initiator_id, plan.partner_id]) {
       const user = await getJid(userId)
-      if (user?.whatsapp_jid) {
+      if (shouldNotify(user, 'SESSION_PICKED')) {
         await sendText(sock, user.whatsapp_jid,
           `Plan cerrao, bro ✓\n\n` +
           `*${plan.movie_title}* · ${session}\n\n` +
@@ -172,7 +160,7 @@ export async function handlePlanChange(sock, payload) {
   if (plan.state === 'no_match' && oldPlan.state !== 'no_match') {
     for (const userId of [plan.initiator_id, plan.partner_id]) {
       const user = await getJid(userId)
-      if (user?.whatsapp_jid) {
+      if (shouldNotify(user, 'NO_MATCH')) {
         await sendText(sock, user.whatsapp_jid,
           `No hay fechas en común para *${plan.movie_title}*. 😔\n\n` +
           `Como 6 colegas queriendo ir al cine un lunes. Quizá la semana que viene.`
@@ -187,7 +175,7 @@ export async function handlePlanChange(sock, payload) {
     const participants = plan.participants || [plan.initiator_id, plan.partner_id]
     for (const userId of participants) {
       const user = await getJid(userId)
-      if (user?.whatsapp_jid) {
+      if (shouldNotify(user, 'ROULETTE_RESULT')) {
         const isThePayer = user.nombre_display === plan.payer_name
         if (isThePayer) {
           await sendText(sock, user.whatsapp_jid,
@@ -217,7 +205,7 @@ export async function handlePlanChange(sock, payload) {
       const existingParticipants = (oldPlan.participants || [])
       for (const existingId of existingParticipants) {
         const existing = await getJid(existingId)
-        if (existing?.whatsapp_jid) {
+        if (shouldNotify(existing, 'PLAN_JOINED')) {
           await sendText(sock, existing.whatsapp_jid,
             `${newName} se ha apuntao al plan de *${plan.movie_title}*. 🙌\n\n` +
             `Ya sois ${plan.participants.length}. El grupo crece como cineros que encuentran VO en Las Palmas.`

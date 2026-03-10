@@ -572,5 +572,22 @@ ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS onboarding_done BOOLEAN DEFAULT fa
 UPDATE perfiles SET onboarding_done = true WHERE onboarding_done IS NULL OR onboarding_done = false;
 
 -- ============================================================================
+-- 15. VOCITO Notification Preferences
+-- ============================================================================
+
+-- vocito_activo: NULL = never connected, TRUE = active, FALSE = paused
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS vocito_activo BOOLEAN DEFAULT NULL;
+
+-- vocito_prefs: JSONB with category toggles {planes: bool, amigos: bool, pelis_vose: bool}
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS vocito_prefs JSONB DEFAULT NULL;
+
+-- Backfill existing linked users → active with default preferences
+UPDATE perfiles
+SET vocito_activo = true,
+    vocito_prefs = '{"planes": true, "amigos": true, "pelis_vose": true}'::jsonb
+WHERE whatsapp_jid IS NOT NULL
+  AND vocito_activo IS NULL;
+
+-- ============================================================================
 -- Done! Verify with: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 -- ============================================================================

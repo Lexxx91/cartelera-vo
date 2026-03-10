@@ -5,19 +5,10 @@
  * WA-12: FRIEND_ACCEPTED — UPDATE amistades (status → accepted)
  */
 
-import { supabase } from '../supabase.js'
 import { sendText } from '../messaging.js'
+import { getJid, shouldNotify } from '../utils.js'
 
 const APP_URL = 'https://cartelera-vo.vercel.app'
-
-async function getJid(userId) {
-  const { data } = await supabase
-    .from('perfiles')
-    .select('whatsapp_jid, nombre_display')
-    .eq('id', userId)
-    .maybeSingle()
-  return data
-}
 
 export async function handleFriendChange(sock, payload) {
   const { eventType, new: row, old: oldRow } = payload
@@ -27,7 +18,7 @@ export async function handleFriendChange(sock, payload) {
     const sender = await getJid(row.user_a)
     const receiver = await getJid(row.user_b)
 
-    if (receiver?.whatsapp_jid) {
+    if (shouldNotify(receiver, 'FRIEND_REQUEST')) {
       const name = sender?.nombre_display || 'Alguien'
       await sendText(sock, receiver.whatsapp_jid,
         `${name} quiere ser tu bro en VOSE. 🎬\n\n` +
@@ -44,7 +35,7 @@ export async function handleFriendChange(sock, payload) {
     const accepter = await getJid(row.user_b)
     const requester = await getJid(row.user_a)
 
-    if (requester?.whatsapp_jid) {
+    if (shouldNotify(requester, 'FRIEND_ACCEPTED')) {
       const name = accepter?.nombre_display || 'Tu amigo'
       await sendText(sock, requester.whatsapp_jid,
         `${name} aceptó. 🤝\n\n` +

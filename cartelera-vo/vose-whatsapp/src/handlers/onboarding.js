@@ -68,21 +68,36 @@ export async function handleOnboarding(sock, jid, token) {
     return
   }
 
-  // 4. If JID is used by a DIFFERENT user → unlink previous
+  // 4. If JID is used by a DIFFERENT user → unlink previous + deactivate VOCITO
   if (existingProfile && existingProfile.id !== tokenRow.user_id) {
     await supabase.from('perfiles').update({
       whatsapp_jid: null,
       whatsapp_linked_at: null,
+      vocito_activo: false,
     }).eq('id', existingProfile.id)
 
     console.log(`🔄 Unlinked JID ${jid} from user ${existingProfile.id} (was ${existingProfile.nombre_display})`)
   }
 
-  // 5. Link the JID to the new user's profile
-  const { error } = await supabase.from('perfiles').update({
+  // 5. Link the JID to the new user's profile + activate VOCITO
+  // Check if user already has prefs (re-linking after unlinking) → preserve them
+  const { data: linkingProfile } = await supabase
+    .from('perfiles')
+    .select('vocito_prefs')
+    .eq('id', tokenRow.user_id)
+    .maybeSingle()
+
+  const updatePayload = {
     whatsapp_jid: jid,
     whatsapp_linked_at: new Date().toISOString(),
-  }).eq('id', tokenRow.user_id)
+    vocito_activo: true,
+  }
+  // Only set default prefs if user doesn't have existing ones (first-time or wiped)
+  if (!linkingProfile?.vocito_prefs) {
+    updatePayload.vocito_prefs = { planes: true, amigos: true, pelis_vose: true }
+  }
+
+  const { error } = await supabase.from('perfiles').update(updatePayload).eq('id', tokenRow.user_id)
 
   if (error) {
     console.error('❌ Link error:', error)
