@@ -9,6 +9,7 @@
     "pair": "node --env-file=.env pair.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@supabase/supabase-js": "^2.49.4",
     "@whiskeysockets/baileys": "^6.7.16",
     "pino": "^9.6.0",

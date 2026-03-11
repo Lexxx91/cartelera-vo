@@ -1,0 +1,20 @@
+app = "vose-vocito"
+primary_region = "ams"  # Amsterdam — closest EU region available
+
+[build]
+  # Uses the existing Dockerfile
+
+# Persistent volume for WhatsApp session credentials
+[mounts]
+  source = "auth_data"
+  destination = "/app/auth_session"
+
+[env]
+  LOG_LEVEL = "warn"
+
+# No [http_service] — this is a process-only app (WhatsApp WebSocket)
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

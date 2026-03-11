@@ -74,8 +74,53 @@ export default function VocitoCard({
   onToggleVocito,
   onTogglePref,
   compact = false,
+  isDemoMode = false,
 }) {
   const [unlinkConfirm, setUnlinkConfirm] = useState(false)
+
+  // ─── DEMO MODE: show simulated active state ───
+  if (isDemoMode && !compact) {
+    return (
+      <div style={{ padding: "0 20px", marginBottom: 20 }}>
+        <div style={{
+          background: "rgba(37,211,102,0.06)",
+          border: "1px solid rgba(37,211,102,0.15)",
+          borderRadius: 20, padding: "20px 18px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <VocitoAvatar size={42} />
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 16, fontWeight: 400, color: "#fff", fontFamily: "'Archivo Black',sans-serif" }}>
+                VOCITO
+              </span>
+            </div>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(37,211,102,0.15)", borderRadius: 10,
+              padding: "5px 10px",
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#25d366" }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#25d366" }}>Demo</span>
+            </div>
+          </div>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
+            VOCITO te avisa por WhatsApp cuando hay match, pelis nuevas en VO, y gestiona tu disponibilidad.
+          </p>
+          {CATEGORIES.map((cat, i) => (
+            <div key={cat.key} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "11px 14px",
+              borderBottom: i < CATEGORIES.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{cat.emoji}</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{cat.label}</span>
+              <Toggle on={!cat.comingSoon} onChange={() => {}} disabled={true} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // ─── COMPACT MODE (for AmigosTab) ───
   if (compact) {

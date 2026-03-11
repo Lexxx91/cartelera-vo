@@ -147,7 +147,7 @@ export default function FriendDetailSheet({
                   <div key={m.title} style={{flexShrink:0,width:80}}>
                     <div style={{width:80,height:120,borderRadius:10,overflow:"hidden",background:"linear-gradient(145deg,#1a1a1a,#111)",marginBottom:4}}>
                       {poster ? (
-                        <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                        <img src={poster} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} />
                       ) : (
                         <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",padding:6}}>
                           <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",textAlign:"center",lineHeight:1.2}}>{m.title}</span>

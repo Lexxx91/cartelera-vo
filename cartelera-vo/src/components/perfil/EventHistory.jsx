@@ -141,7 +141,7 @@ export default function EventHistory({ pastPlans, friends, user, movies, onClose
                   background: 'linear-gradient(145deg,#1a1a1a,#111)',
                 }}>
                   {poster ? (
-                    <img src={poster} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={poster} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <div style={{
                       width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',

@@ -168,8 +168,19 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
       background: "#000",
       display: "flex", flexDirection: "column",
       overflow: "hidden",
-      animation: "fadeIn 0.3s ease",
+      animation: "sheetExpand 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
     }}>
+      <style>{`
+        @keyframes sheetExpand {
+          0% { opacity:0; transform:scale(0.95) translateY(20px); border-radius:20px; }
+          40% { opacity:1; transform:scale(1) translateY(0); border-radius:8px; }
+          100% { opacity:1; transform:scale(1) translateY(0); border-radius:0; }
+        }
+        @keyframes contentReveal {
+          0% { opacity:0; transform:translateY(30px); }
+          100% { opacity:1; transform:translateY(0); }
+        }
+      `}</style>
       {/* Celebration confetti */}
       {showCelebration && (
         <>
@@ -243,6 +254,7 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
         display: "flex", flexDirection: "column",
         justifyContent: "flex-end",
         padding: "0 24px 44px",
+        animation: "contentReveal 0.35s ease 0.15s both",
       }}>
         {/* Movie title + subtitle */}
         <h1 style={{

@@ -17,8 +17,9 @@ import Toast from './components/Toast.jsx'
 import BottomNav from './components/BottomNav.jsx'
 import CartelleraTab from './components/cartelera/CartelleraTab.jsx'
 import MatchPopup from './components/cartelera/MatchPopup.jsx'
-import AmigosTab from './components/amigos/AmigosTab.jsx'
-import ProfileTab from './components/perfil/ProfileTab.jsx'
+import PlanesTab from './components/planes/PlanesTab.jsx'
+import SquadTab from './components/squad/SquadTab.jsx'
+import ProfileSheet from './components/perfil/ProfileSheet.jsx'
 import PlanConfirmedOverlay from './components/amigos/PlanConfirmedOverlay.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
 import OnboardingStories from './components/onboarding/OnboardingStories.jsx'
@@ -34,6 +35,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showVocitoSheet, setShowVocitoSheet] = useState(false)
   const [vocitoSheetPending, setVocitoSheetPending] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   // Initialize hooks
   const { profile, loading: profileLoading, updateProfile, uploadAvatar, inviteeCount, generateWhatsAppToken, unlinkWhatsApp, waLinking, waLinkError, retryWhatsAppLink, toggleVocito, updateVocitoPrefs } = useProfile(user)
@@ -106,7 +108,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     if (!pendingPlanJoin) return
     handleJoinPlan(pendingPlanJoin)
     onClearPendingPlan?.()
-    setTab("amigos")
+    setTab("planes")
   }, [pendingPlanJoin])
 
   // Check if onboarding is needed (new users + demo mode)
@@ -193,7 +195,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
     setMatchPopup(null)
     if (plan) {
       addToast({ type: "match", emoji: "🎯", title: "Disponibilidad enviada", body: `${friend.nombre_display || friend.nombre} será notificado` })
-      setTab("amigos")
+      setTab("planes")
 
       // Send email notification to partner (fire-and-forget, don't block UI)
       if (!isDemoMode) {
@@ -336,11 +338,12 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   // Friend suggestions
   const friendSuggestions = isDemoMode ? demo.getDemoSuggestions(localVotes) : realVotes.getFriendSuggestions()
 
-  // Badge count
-  const badgeCount = pendingIn.length + plans.filter(p => {
+  // Badge counts — split for Planes and Squad tabs
+  const planesBadge = plans.filter(p => {
     const s = getMyState(p)
     return s === 'proposed' || s === 'pick_avail' || s === 'pick_theirs'
   }).length
+  const squadBadge = pendingIn.length
 
   // Loading
   if (profileLoading) {
@@ -353,16 +356,19 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   }
 
   return (
-    <div style={{minHeight:"100dvh",background:"#000",fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif",color:"#fff",overflowX:"hidden",maxWidth:430,margin:"0 auto",position:"relative"}}>
+    <div style={{minHeight:"100dvh",height:"100dvh",background:"#000",fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif",color:"#fff",overflowX:"hidden",maxWidth:430,margin:"0 auto",position:"relative",display:"flex",flexDirection:"column"}}>
       <style>{`
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.45}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes tapBounce{0%{transform:scale(1)}50%{transform:scale(0.95)}100%{transform:scale(1)}}
+        @keyframes sectionFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         ::-webkit-scrollbar{display:none}
         *{box-sizing:border-box}
         input::placeholder{color:rgba(255,255,255,0.26)}
         input:focus{outline:none}
+        button:active{transform:scale(0.96);transition:transform 0.1s ease}
       `}</style>
 
       <Toast toasts={toasts} />
@@ -408,8 +414,31 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
         />
       )}
 
+      {/* Header — avatar for Planes/Squad tabs */}
+      {tab !== "cartelera" && (
+        <div style={{
+          display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"12px 20px",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",
+          flexShrink:0,
+        }}>
+          <div style={{display:"flex",alignItems:"baseline",gap:0}}>
+            <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:18,fontWeight:400,color:"#fff",letterSpacing:"0.02em"}}>VO</span>
+            <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:18,fontWeight:400,color:"#ff3b3b",letterSpacing:"0.02em"}}>SE</span>
+          </div>
+          <button onClick={() => setProfileOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:0,WebkitTapHighlightColor:"transparent"}}>
+            <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",background:"linear-gradient(135deg,#1a1a1a,#111)",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid rgba(255,255,255,0.1)"}}>
+              {(profile?.avatar_url || user?.user_metadata?.avatar_url) ? (
+                <img src={profile?.avatar_url || user?.user_metadata?.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+              ) : (
+                <span style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.7)"}}>{(profile?.nombre_display || user?.user_metadata?.full_name || "U").charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* Tab content */}
-      <div style={{paddingBottom:"calc(70px + env(safe-area-inset-bottom, 0px))",height:"100dvh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+      <div style={{paddingBottom:"calc(70px + env(safe-area-inset-bottom, 0px))",height: tab === "cartelera" ? "100dvh" : undefined,flex: tab !== "cartelera" ? 1 : undefined,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
         {tab === "cartelera" && (
           <CartelleraTab
             movies={movies}
@@ -423,15 +452,11 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onUndoVote={(title) => !isDemoMode && realVotes.removeVote(title)}
           />
         )}
-        {tab === "amigos" && (
-          <AmigosTab
+        {tab === "planes" && (
+          <PlanesTab
             user={user}
             profile={profile}
             friends={friends}
-            pendingIn={pendingIn}
-            pendingOut={pendingOut}
-            onAcceptFriend={handleAcceptFriend}
-            onRemoveFriend={removeFriend}
             plans={plans}
             getMyState={getMyState}
             onRespondYes={handleRespondYes}
@@ -446,12 +471,6 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onSwitchToCartelera={() => setTab("cartelera")}
             isDemoMode={isDemoMode}
             movies={movies}
-            onGetFriendsOfFriend={isDemoMode ? demo.getDemoFriendsOfFriend : getFriendsOfFriend}
-            onSendDirectRequest={handleSendDirectRequest}
-            friendVotes={friendVotes}
-            myVotesForCommon={myVotes}
-            getDemoMoviesInCommon={isDemoMode ? demo.getDemoMoviesInCommon : null}
-            onDiscoverUsers={isDemoMode ? demo.getDemoDiscoverUsers : discoverUsers}
             onMarkWatched={handleMarkWatched}
             onSavePayer={handleSavePayer}
             onSaveRating={handleSaveRating}
@@ -460,42 +479,68 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
               realPlans.leavePlan(planId)
               addToast({ type: "info", emoji: "👋", title: "Has salido del plan", body: "Ya no estás apuntado" })
             }}
+            vocitoState={vocitoState}
+            onConnectWhatsApp={generateWhatsAppToken}
+            onUpdateProfile={updateProfile}
+          />
+        )}
+        {tab === "squad" && (
+          <SquadTab
+            user={user}
+            profile={profile}
+            friends={friends}
+            pendingIn={pendingIn}
+            pendingOut={pendingOut}
+            onAcceptFriend={handleAcceptFriend}
+            onRemoveFriend={removeFriend}
+            isDemoMode={isDemoMode}
+            movies={movies}
+            onGetFriendsOfFriend={isDemoMode ? demo.getDemoFriendsOfFriend : getFriendsOfFriend}
+            onSendDirectRequest={handleSendDirectRequest}
+            friendVotes={friendVotes}
+            myVotesForCommon={myVotes}
+            getDemoMoviesInCommon={isDemoMode ? demo.getDemoMoviesInCommon : null}
+            onDiscoverUsers={isDemoMode ? demo.getDemoDiscoverUsers : discoverUsers}
             onConnectWhatsApp={generateWhatsAppToken}
             onUnlinkWhatsApp={unlinkWhatsApp}
             waLinking={waLinking}
             waLinkError={waLinkError}
             onRetryWhatsApp={retryWhatsAppLink}
             whatsappLinked={!!profile?.whatsapp_jid}
-          />
-        )}
-        {tab === "perfil" && (
-          <ProfileTab
-            user={user}
-            profile={profile}
-            onUpdateProfile={updateProfile}
-            onUploadAvatar={uploadAvatar}
-            onLogout={onLogout}
-            myVotes={myVotes}
-            movies={movies}
-            inviteeCount={inviteeCount}
-            pwa={pwa}
-            isAdmin={isAdmin}
-            campaignOverrides={campaignOverrides}
-            onSaveCampaignOverride={saveCampaignOverride}
-            campaignsLoading={campaignsLoading}
-            onConnectWhatsApp={generateWhatsAppToken}
-            onUnlinkWhatsApp={unlinkWhatsApp}
-            waLinking={waLinking}
-            waLinkError={waLinkError}
-            onRetryWhatsApp={retryWhatsAppLink}
-            onToggleVocito={toggleVocito}
-            onToggleVocitoPref={updateVocitoPrefs}
-            vocitoState={vocitoState}
-            pastPlans={pastPlans}
-            friends={friends}
+            plans={plans}
+            activeCampaign={campaignOverrides.find(c => c.active && (!c.end_date || new Date(c.end_date) > Date.now())) || null}
           />
         )}
       </div>
+
+      {/* Profile sheet overlay */}
+      <ProfileSheet
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        user={user}
+        profile={profile}
+        onUpdateProfile={updateProfile}
+        onUploadAvatar={uploadAvatar}
+        onLogout={onLogout}
+        myVotes={myVotes}
+        movies={movies}
+        inviteeCount={inviteeCount}
+        pwa={pwa}
+        isAdmin={isAdmin}
+        campaignOverrides={campaignOverrides}
+        onSaveCampaignOverride={saveCampaignOverride}
+        campaignsLoading={campaignsLoading}
+        onConnectWhatsApp={generateWhatsAppToken}
+        onUnlinkWhatsApp={unlinkWhatsApp}
+        waLinking={waLinking}
+        waLinkError={waLinkError}
+        onRetryWhatsApp={retryWhatsAppLink}
+        onToggleVocito={toggleVocito}
+        onToggleVocitoPref={updateVocitoPrefs}
+        vocitoState={vocitoState}
+        pastPlans={pastPlans}
+        friends={friends}
+      />
 
       <InstallBanner
         canInstall={pwa.canInstall}
@@ -503,9 +548,9 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
         isIOSChrome={pwa.isIOSChrome}
         isInstalled={pwa.isInstalled}
         onPromptInstall={pwa.promptInstall}
-        onGoToProfile={() => setTab("perfil")}
+        onGoToProfile={() => setProfileOpen(true)}
       />
-      <BottomNav tab={tab} onTabChange={setTab} badge={badgeCount} />
+      <BottomNav tab={tab} onTabChange={setTab} planesBadge={planesBadge} squadBadge={squadBadge} />
     </div>
   )
 }
