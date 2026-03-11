@@ -80,7 +80,7 @@ async function fetchCartelera() {
   const today = new Date().toISOString().split('T')[0]
   const { data: rows } = await supabase
     .from('cartelera')
-    .select('title, genre, duration, cinema_id, time, date')
+    .select('title, genre, duration, cinema_id, showtimes, date')
     .gte('date', today)
     .order('title', { ascending: true })
     .limit(100)
@@ -91,7 +91,7 @@ async function fetchCartelera() {
     return []
   }
 
-  // Group by movie → cinema → times
+  // Group by movie → cinema → times (showtimes is a JSON array per row)
   const movieMap = new Map()
   for (const row of rows) {
     if (!movieMap.has(row.title)) {
@@ -100,7 +100,8 @@ async function fetchCartelera() {
     const m = movieMap.get(row.title)
     const cinema = CINEMA_NAMES[row.cinema_id] || row.cinema_id || 'Sin cine'
     if (!m.byCinema[cinema]) m.byCinema[cinema] = new Set()
-    if (row.time) m.byCinema[cinema].add(row.time)
+    const times = Array.isArray(row.showtimes) ? row.showtimes : []
+    for (const t of times) m.byCinema[cinema].add(t)
   }
 
   const summarized = Array.from(movieMap.values()).map(m => ({

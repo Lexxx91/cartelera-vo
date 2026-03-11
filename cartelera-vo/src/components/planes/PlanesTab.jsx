@@ -63,7 +63,7 @@ function PlanCarousel({ plans, getPoster, friends, user, onSelect }) {
       onScroll={handleScroll}
       style={{
         display:"flex",gap:16,overflowX:"auto",overflowY:"hidden",
-        padding:`0 ${plans.length === 1 ? '20px' : 'calc((100% - 85%) / 2)'}`,
+        padding:`4px ${plans.length === 1 ? '20px' : 'calc((100% - 85%) / 2)'}`,
         scrollSnapType:"x mandatory",scrollbarWidth:"none",
         WebkitOverflowScrolling:"touch",marginBottom:12,
         touchAction:"pan-x",overscrollBehavior:"contain",
@@ -81,7 +81,7 @@ function PlanCarousel({ plans, getPoster, friends, user, onSelect }) {
               flexShrink:0,width:plans.length === 1 ? "100%" : "85%",
               scrollSnapAlign:"center",
               position:"relative",borderRadius:18,overflow:"hidden",
-              cursor:"pointer",height:180,
+              cursor:"pointer",height:220,
               border:`1px solid rgba(52,199,89,${isActive ? 0.3 : 0.15})`,
               transform:`scale(${isActive ? 1.02 : 0.96})`,
               opacity:isActive ? 1 : 0.5,
@@ -464,8 +464,8 @@ export default function PlanesTab({
               {friendSuggestions.map(({ movieTitle, voters }) => {
                 const poster = getPoster(movieTitle)
                 return (
-                  <div key={movieTitle} onClick={() => onVoyInline(movieTitle)} style={{flexShrink:0,width:120,position:"relative",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
-                    <div style={{width:120,height:180,borderRadius:14,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
+                  <div key={movieTitle} onClick={() => onVoyInline(movieTitle)} style={{flexShrink:0,width:130,position:"relative",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                    <div style={{width:130,height:200,borderRadius:14,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)"}}>
                       {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
                       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%)"}} />
                       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"8px 10px"}}>
@@ -494,8 +494,8 @@ export default function PlanesTab({
               {myVoyWithoutPlan.map(title => {
                 const poster = getPoster(title)
                 return (
-                  <div key={title} onClick={() => onSwitchToCartelera()} style={{flexShrink:0,width:100,cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
-                    <div style={{width:100,height:150,borderRadius:12,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                  <div key={title} onClick={() => onSwitchToCartelera()} style={{flexShrink:0,width:120,cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                    <div style={{width:120,height:180,borderRadius:12,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)",border:"1px solid rgba(255,255,255,0.06)"}}>
                       {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy" />}
                       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%)"}} />
                       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 8px"}}>
