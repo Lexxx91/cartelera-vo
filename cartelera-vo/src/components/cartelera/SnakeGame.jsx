@@ -389,10 +389,16 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
       ctx.textAlign = 'center'
       ctx.fillStyle = '#fff'
       ctx.font = "bold 16px 'Archivo Black', sans-serif"
-      ctx.fillText('TOCA PARA EMPEZAR', g.w / 2, g.h / 2 - 10)
+      ctx.fillText('TOCA PARA EMPEZAR', g.w / 2, g.h / 2 - 14)
       ctx.fillStyle = 'rgba(255,255,255,0.4)'
       ctx.font = '12px system-ui, sans-serif'
-      ctx.fillText('Desliza para mover el chorizo', g.w / 2, g.h / 2 + 15)
+      ctx.fillText('Usa las flechas para girar', g.w / 2, g.h / 2 + 10)
+
+      // Draw arrow hint pointing down at D-pad
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'
+      ctx.font = '18px system-ui, sans-serif'
+      const bounce = Math.sin(Date.now() / 400) * 3
+      ctx.fillText('↓', g.w / 2, g.h / 2 + 34 + bounce)
     }
 
     // Multiplier badge
@@ -762,6 +768,31 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
     }
   }, [gameState])
 
+  // ─── D-pad handler (on-screen directional buttons) ───────────────────
+  function handleDpad(newDir) {
+    const g = gameRef.current
+    if (!g) return
+
+    // Start game on first interaction
+    if (!g.started) {
+      setGameState('playing')
+      g.alive = true
+      g.started = true
+      startGameLoop()
+      // Set initial direction if compatible (not 180° from default RIGHT)
+      if (!opposite([1, 0], newDir)) {
+        g.nextDir = [...newDir]
+      }
+      return
+    }
+
+    if (!g.alive) return
+
+    if (!opposite(g.dir, newDir)) {
+      g.nextDir = [...newDir]
+    }
+  }
+
   // ─── Score saving ──────────────────────────────────────────────────────
   async function handleGameEnd(finalScore) {
     setLoadingRank(true)
@@ -1000,6 +1031,88 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
         />
         {renderLeaderboard()}
       </div>
+
+      {/* D-pad directional controls */}
+      {gameState !== 'gameOver' && (
+        <div style={{
+          display: 'flex', justifyContent: 'center',
+          padding: '8px 0 2px', flexShrink: 0,
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 52px)',
+            gridTemplateRows: 'repeat(3, 44px)',
+            gap: 3,
+          }}>
+            {/* Row 1: UP */}
+            <div />
+            <button
+              onPointerDown={(e) => { e.preventDefault(); handleDpad(DIR.UP) }}
+              style={{
+                width: 52, height: 44, borderRadius: 10,
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)', fontSize: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', touchAction: 'manipulation',
+                WebkitUserSelect: 'none', userSelect: 'none',
+                padding: 0, fontFamily: 'system-ui, sans-serif',
+              }}
+            >▲</button>
+            <div />
+            {/* Row 2: LEFT, center, RIGHT */}
+            <button
+              onPointerDown={(e) => { e.preventDefault(); handleDpad(DIR.LEFT) }}
+              style={{
+                width: 52, height: 44, borderRadius: 10,
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)', fontSize: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', touchAction: 'manipulation',
+                WebkitUserSelect: 'none', userSelect: 'none',
+                padding: 0, fontFamily: 'system-ui, sans-serif',
+              }}
+            >◀</button>
+            <div style={{
+              width: 52, height: 44, borderRadius: 10,
+              background: 'rgba(255,255,255,0.02)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)' }}>🌭</span>
+            </div>
+            <button
+              onPointerDown={(e) => { e.preventDefault(); handleDpad(DIR.RIGHT) }}
+              style={{
+                width: 52, height: 44, borderRadius: 10,
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)', fontSize: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', touchAction: 'manipulation',
+                WebkitUserSelect: 'none', userSelect: 'none',
+                padding: 0, fontFamily: 'system-ui, sans-serif',
+              }}
+            >▶</button>
+            {/* Row 3: DOWN */}
+            <div />
+            <button
+              onPointerDown={(e) => { e.preventDefault(); handleDpad(DIR.DOWN) }}
+              style={{
+                width: 52, height: 44, borderRadius: 10,
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)', fontSize: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', touchAction: 'manipulation',
+                WebkitUserSelect: 'none', userSelect: 'none',
+                padding: 0, fontFamily: 'system-ui, sans-serif',
+              }}
+            >▼</button>
+            <div />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
