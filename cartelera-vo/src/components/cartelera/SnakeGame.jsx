@@ -494,15 +494,126 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
     ctx.textAlign = 'start'
   }
 
+  // ─── Direction between two segments ─────────────────────────────────
+  function segDir(snake, i) {
+    if (i === 0 && snake.length > 1) return [snake[0].x - snake[1].x, snake[0].y - snake[1].y]
+    if (i > 0) return [snake[i - 1].x - snake[i].x, snake[i - 1].y - snake[i].y]
+    return [1, 0]
+  }
+
+  // ─── Draw chorizo capsule (shared by head + body) ─────────────────────
+  function drawCapsule(ctx, cx, cy, isHorizontal, w, h, color1, color2) {
+    const hw = w / 2, hh = h / 2, r = Math.min(hw, hh)
+    // Rounded rect path
+    ctx.beginPath()
+    roundRect(ctx, cx - hw, cy - hh, w, h, r)
+
+    // Gradient — top-left highlight for 3D look
+    const grad = ctx.createLinearGradient(cx - hw, cy - hh, cx + hw * 0.3, cy + hh)
+    grad.addColorStop(0, color1)
+    grad.addColorStop(0.5, color2)
+    grad.addColorStop(1, shadeColor(color2, -25))
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    // Glossy highlight — elliptical shine on upper half
+    ctx.save()
+    ctx.beginPath()
+    roundRect(ctx, cx - hw, cy - hh, w, h, r)
+    ctx.clip()
+    ctx.beginPath()
+    const shineW = w * 0.5, shineH = h * 0.25
+    ctx.ellipse(cx - hw * 0.1, cy - hh * 0.35, shineW, shineH, isHorizontal ? 0 : Math.PI / 2, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'
+    ctx.fill()
+    ctx.restore()
+
+    // Subtle casing texture — faint lines
+    ctx.save()
+    ctx.beginPath()
+    roundRect(ctx, cx - hw, cy - hh, w, h, r)
+    ctx.clip()
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+    ctx.lineWidth = 0.5
+    const lineCount = 3
+    for (let j = 1; j <= lineCount; j++) {
+      ctx.beginPath()
+      if (isHorizontal) {
+        const ly = cy - hh + (h / (lineCount + 1)) * j
+        ctx.moveTo(cx - hw, ly)
+        ctx.lineTo(cx + hw, ly)
+      } else {
+        const lx = cx - hw + (w / (lineCount + 1)) * j
+        ctx.moveTo(lx, cy - hh)
+        ctx.lineTo(lx, cy + hh)
+      }
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
+  // ─── Draw string tie between two positions ────────────────────────────
+  function drawTie(ctx, x, y, isHorizontal) {
+    ctx.save()
+    // Twisted string knot
+    const tw = isHorizontal ? 3 : CELL_SIZE * 0.5
+    const th = isHorizontal ? CELL_SIZE * 0.5 : 3
+    // String color
+    ctx.strokeStyle = '#C4A56C'
+    ctx.lineWidth = 1.5
+    ctx.lineCap = 'round'
+    // Cross pattern for twisted look
+    if (isHorizontal) {
+      ctx.beginPath()
+      ctx.moveTo(x - 1, y - th * 0.3); ctx.lineTo(x + 1, y + th * 0.3)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(x + 1, y - th * 0.3); ctx.lineTo(x - 1, y + th * 0.3)
+      ctx.stroke()
+    } else {
+      ctx.beginPath()
+      ctx.moveTo(x - tw * 0.3, y - 1); ctx.lineTo(x + tw * 0.3, y + 1)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(x - tw * 0.3, y + 1); ctx.lineTo(x + tw * 0.3, y - 1)
+      ctx.stroke()
+    }
+    // Small knot dot in center
+    ctx.fillStyle = '#A8884C'
+    ctx.beginPath()
+    ctx.arc(x, y, 1.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+
   // ─── Draw snake (chorizo) ──────────────────────────────────────────────
   function drawSnake(ctx, g) {
     const snake = g.snake
     const t = g.moveProgress != null ? g.moveProgress : 1
     const prev = g.prevPositions
 
+    // First pass: draw ties between segments (behind the sausages)
+    for (let i = 0; i < snake.length - 1; i++) {
+      let sx1 = snake[i].x, sy1 = snake[i].y
+      let sx2 = snake[i + 1].x, sy2 = snake[i + 1].y
+      if (prev && prev[i] && prev[i + 1] && t < 1) {
+        sx1 = prev[i].x + (snake[i].x - prev[i].x) * t
+        sy1 = prev[i].y + (snake[i].y - prev[i].y) * t
+        sx2 = prev[i + 1].x + (snake[i + 1].x - prev[i + 1].x) * t
+        sy2 = prev[i + 1].y + (snake[i + 1].y - prev[i + 1].y) * t
+      }
+      const cx1 = g.offsetX + (sx1 + 0.5) * CELL_SIZE
+      const cy1 = g.offsetY + (sy1 + 0.5) * CELL_SIZE
+      const cx2 = g.offsetX + (sx2 + 0.5) * CELL_SIZE
+      const cy2 = g.offsetY + (sy2 + 0.5) * CELL_SIZE
+      const mx = (cx1 + cx2) / 2, my = (cy1 + cy2) / 2
+      const isH = Math.abs(sx1 - sx2) > Math.abs(sy1 - sy2)
+      drawTie(ctx, mx, my, isH)
+    }
+
+    // Second pass: draw sausage segments (on top of ties)
     for (let i = snake.length - 1; i >= 0; i--) {
       let sx = snake[i].x, sy = snake[i].y
-      // Lerp for smooth movement
       if (prev && prev[i] && t < 1) {
         sx = prev[i].x + (snake[i].x - prev[i].x) * t
         sy = prev[i].y + (snake[i].y - prev[i].y) * t
@@ -511,109 +622,52 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
       const cy = g.offsetY + (sy + 0.5) * CELL_SIZE
       const isHead = i === 0
       const isTail = i === snake.length - 1
+      const dir = segDir(snake, i)
+      const isH = Math.abs(dir[0]) >= Math.abs(dir[1])
 
+      // Capsule dimensions — wider along direction of travel
+      const longSide = CELL_SIZE * 0.92
+      const shortSide = CELL_SIZE * 0.7
+      const w = isH ? longSide : shortSide
+      const h = isH ? shortSide : longSide
+      const scale = isTail ? 0.8 : 1
+
+      // Chorizo colors: deep reddish-brown like real Chorizo de Teror
+      const c1 = i % 2 === 0 ? '#9C5030' : '#8E4428'
+      const c2 = i % 2 === 0 ? '#7A3520' : '#6E2C18'
+
+      drawCapsule(ctx, cx, cy, isH, w * scale, h * scale, c1, c2)
+
+      // Head extras: eyes + front tie knot
       if (isHead) {
-        drawChorizoHead(ctx, cx, cy, g.dir)
-      } else {
-        drawChorizoSegment(ctx, cx, cy, i, isTail, snake.length)
+        // Eyes
+        const eFwd = isH ? (dir[0] > 0 ? 1 : -1) * CELL_SIZE * 0.22 : 0
+        const eSide = isH ? 0 : (dir[1] > 0 ? 1 : -1) * CELL_SIZE * 0.22
+        const ePerp = CELL_SIZE * 0.18
+        let e1x, e1y, e2x, e2y
+        if (isH) {
+          e1x = cx + eFwd; e1y = cy - ePerp
+          e2x = cx + eFwd; e2y = cy + ePerp
+        } else {
+          e1x = cx - ePerp; e1y = cy + eSide
+          e2x = cx + ePerp; e2y = cy + eSide
+        }
+        // White
+        ctx.fillStyle = '#fff'
+        ctx.beginPath(); ctx.arc(e1x, e1y, 2, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(e2x, e2y, 2, 0, Math.PI * 2); ctx.fill()
+        // Pupil
+        ctx.fillStyle = '#1a0a00'
+        ctx.beginPath(); ctx.arc(e1x + (dir[0]) * 0.6, e1y + (dir[1]) * 0.6, 1, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(e2x + (dir[0]) * 0.6, e2y + (dir[1]) * 0.6, 1, 0, Math.PI * 2); ctx.fill()
       }
-    }
-  }
 
-  // ─── Chorizo head ──────────────────────────────────────────────────────
-  function drawChorizoHead(ctx, cx, cy, dir) {
-    const r = CELL_SIZE * 0.44
-
-    // Head body
-    ctx.beginPath()
-    const headGrad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r * 1.3)
-    headGrad.addColorStop(0, '#A05030')
-    headGrad.addColorStop(0.5, '#8B2500')
-    headGrad.addColorStop(1, '#6B1A00')
-    ctx.fillStyle = headGrad
-    ctx.arc(cx, cy, r, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Fat speckles on head
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'
-    const specks = [[0.15, -0.2], [-0.2, 0.15], [0.25, 0.1]]
-    specks.forEach(([ox, oy]) => {
-      ctx.beginPath()
-      ctx.arc(cx + r * ox, cy + r * oy, 1, 0, Math.PI * 2)
-      ctx.fill()
-    })
-
-    // Atadura (beige band) on the direction of movement
-    const bandX = cx + dir[0] * r * 0.6
-    const bandY = cy + dir[1] * r * 0.6
-    ctx.beginPath()
-    ctx.strokeStyle = '#D2B48C'
-    ctx.lineWidth = 2.5
-    if (dir[0] !== 0) {
-      // Horizontal direction — vertical band
-      ctx.moveTo(bandX, cy - r * 0.5)
-      ctx.lineTo(bandX, cy + r * 0.5)
-    } else {
-      // Vertical direction — horizontal band
-      ctx.moveTo(cx - r * 0.5, bandY)
-      ctx.lineTo(cx + r * 0.5, bandY)
-    }
-    ctx.stroke()
-
-    // Eyes — simple dots
-    let e1x, e1y, e2x, e2y
-    const eOff = r * 0.3
-    const eFwd = r * 0.15
-    if (dir[0] === 1)      { e1x = cx + eFwd; e1y = cy - eOff; e2x = cx + eFwd; e2y = cy + eOff }
-    else if (dir[0] === -1) { e1x = cx - eFwd; e1y = cy - eOff; e2x = cx - eFwd; e2y = cy + eOff }
-    else if (dir[1] === -1) { e1x = cx - eOff; e1y = cy - eFwd; e2x = cx + eOff; e2y = cy - eFwd }
-    else                    { e1x = cx - eOff; e1y = cy + eFwd; e2x = cx + eOff; e2y = cy + eFwd }
-
-    ctx.fillStyle = '#fff'
-    ctx.beginPath(); ctx.arc(e1x, e1y, 1.8, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(e2x, e2y, 1.8, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#000'
-    ctx.beginPath(); ctx.arc(e1x + dir[0] * 0.5, e1y + dir[1] * 0.5, 0.8, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(e2x + dir[0] * 0.5, e2y + dir[1] * 0.5, 0.8, 0, Math.PI * 2); ctx.fill()
-  }
-
-  // ─── Chorizo body segment ─────────────────────────────────────────────
-  function drawChorizoSegment(ctx, cx, cy, idx, isTail, len) {
-    const baseR = CELL_SIZE * 0.4
-    const r = isTail ? baseR * 0.8 : baseR
-
-    // Alternate colors for chorizo texture
-    const baseColor = idx % 2 === 0 ? '#A0522D' : '#8B3A2A'
-
-    ctx.beginPath()
-    const segGrad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r * 1.1)
-    segGrad.addColorStop(0, baseColor)
-    segGrad.addColorStop(1, shadeColor(baseColor, -20))
-    ctx.fillStyle = segGrad
-    ctx.arc(cx, cy, r, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Fat speckles (grasa)
-    if (!isTail) {
-      ctx.fillStyle = 'rgba(255,255,255,0.25)'
-      // Use index-based pseudorandom positions for consistent look
-      const seed = idx * 7
-      for (let j = 0; j < 3; j++) {
-        const ox = Math.sin(seed + j * 2.3) * r * 0.5
-        const oy = Math.cos(seed + j * 3.1) * r * 0.5
-        ctx.beginPath()
-        ctx.arc(cx + ox, cy + oy, 0.8 + (j % 2) * 0.4, 0, Math.PI * 2)
-        ctx.fill()
+      // Tail: extra knot at the end
+      if (isTail) {
+        const tieX = cx - dir[0] * CELL_SIZE * 0.35
+        const tieY = cy - dir[1] * CELL_SIZE * 0.35
+        drawTie(ctx, tieX, tieY, isH)
       }
-    }
-
-    // Tail tie
-    if (isTail) {
-      ctx.beginPath()
-      ctx.strokeStyle = '#D2B48C'
-      ctx.lineWidth = 1.5
-      ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2)
-      ctx.stroke()
     }
   }
 
@@ -808,7 +862,7 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
         <p style={{ margin: '0 0 4px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
           {gameRef.current?.papasEaten || 0} papas comidas
         </p>
-        <p style={{ margin: '0 0 16px', fontSize: 28, fontWeight: 900, color: '#8B2500', fontFamily: "'Archivo Black', sans-serif" }}>
+        <p style={{ margin: '0 0 16px', fontSize: 28, fontWeight: 900, color: '#ff3b3b', fontFamily: "'Archivo Black', sans-serif" }}>
           {score} pts
         </p>
 
@@ -840,8 +894,8 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
               <div key={entry.user_id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '7px 12px', borderRadius: 10,
-                background: isMe ? 'rgba(139,37,0,0.15)' : 'transparent',
-                border: isMe ? '1px solid rgba(139,37,0,0.35)' : '1px solid transparent',
+                background: isMe ? 'rgba(255,59,59,0.12)' : 'transparent',
+                border: isMe ? '1px solid rgba(255,59,59,0.3)' : '1px solid transparent',
                 marginBottom: 3,
               }}>
                 <span style={{ fontSize: 14, width: 24, textAlign: 'center', flexShrink: 0 }}>
@@ -869,7 +923,7 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
                 </span>
                 <span style={{
                   fontSize: 13, fontWeight: 800, flexShrink: 0,
-                  color: isMe ? '#8B2500' : 'rgba(255,255,255,0.5)',
+                  color: isMe ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
                 }}>
                   {entry.score}
                 </span>
@@ -882,8 +936,8 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
         <div style={{ display: 'flex', gap: 10, marginTop: 16, width: '100%', maxWidth: 300 }}>
           <button onClick={handleRestart} style={{
             flex: 1, padding: '12px 16px', borderRadius: 12,
-            background: '#8B2500', border: 'none',
-            color: '#fff', fontSize: 14, fontWeight: 800,
+            background: '#ff3b3b', border: 'none',
+            color: '#000', fontSize: 14, fontWeight: 800,
             fontFamily: "'Archivo Black', sans-serif",
             cursor: 'pointer', textTransform: 'uppercase',
           }}>
