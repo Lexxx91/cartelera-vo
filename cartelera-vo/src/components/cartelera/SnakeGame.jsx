@@ -82,6 +82,7 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
       // Smooth movement lerp
       moveProgress: 1,     // 0→1 lerp between ticks
       prevPositions: null,  // previous snake positions for lerp
+      started: false,       // tracks if game has begun (for draw overlay)
       alive: true,
     }
   }
@@ -382,18 +383,16 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
     })
 
     // ─── Tap to start overlay ──────────────────────────────────────────
-    if (!g.alive || gameState === 'idle') {
-      if (gameState === 'idle') {
-        ctx.fillStyle = 'rgba(0,0,0,0.6)'
-        ctx.fillRect(0, 0, g.w, g.h)
-        ctx.textAlign = 'center'
-        ctx.fillStyle = '#fff'
-        ctx.font = "bold 16px 'Archivo Black', sans-serif"
-        ctx.fillText('TOCA PARA EMPEZAR', g.w / 2, g.h / 2 - 10)
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'
-        ctx.font = '12px system-ui, sans-serif'
-        ctx.fillText('Desliza para mover el chorizo', g.w / 2, g.h / 2 + 15)
-      }
+    if (!g.started) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'
+      ctx.fillRect(0, 0, g.w, g.h)
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#fff'
+      ctx.font = "bold 16px 'Archivo Black', sans-serif"
+      ctx.fillText('TOCA PARA EMPEZAR', g.w / 2, g.h / 2 - 10)
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'
+      ctx.font = '12px system-ui, sans-serif'
+      ctx.fillText('Desliza para mover el chorizo', g.w / 2, g.h / 2 + 15)
     }
 
     // Multiplier badge
@@ -620,17 +619,21 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
 
   // ─── Touch handlers ────────────────────────────────────────────────────
   const handleTouchStart = useCallback((e) => {
-    // Prevent scroll
+    // Let button taps through (game over overlay, close button, etc.)
+    if (e.target.closest('button')) return
     e.preventDefault()
     const touch = e.touches[0]
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
   }, [])
 
   const handleTouchMove = useCallback((e) => {
+    if (e.target.closest('button')) return
     e.preventDefault()
   }, [])
 
   const handleTouchEnd = useCallback((e) => {
+    // Let button taps through
+    if (e.target.closest('button')) return
     e.preventDefault()
     const g = gameRef.current
     if (!g) return
@@ -638,6 +641,7 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
     if (gameState === 'idle') {
       setGameState('playing')
       g.alive = true
+      g.started = true
       startGameLoop()
       return
     }
@@ -699,6 +703,7 @@ export default function SnakeGame({ user, onClose, campaignOverrides }) {
     if (gameState === 'idle') {
       setGameState('playing')
       g.alive = true
+      g.started = true
       startGameLoop()
     }
   }, [gameState])
