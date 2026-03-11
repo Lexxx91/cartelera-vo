@@ -1,11 +1,11 @@
 import { useState } from 'react'
 
 const EMOJI_SCALE = [
-  { emoji: "😴", label: "Sueño", value: 2 },
-  { emoji: "😐", label: "Meh", value: 4 },
-  { emoji: "😊", label: "Bien", value: 6 },
-  { emoji: "🔥", label: "Fos", value: 8 },
-  { emoji: "😍", label: "PELAZO", value: 10 },
+  { emoji: "😴", label: "SUEÑO", value: 2 },
+  { emoji: "😐", label: "MEH", value: 4 },
+  { emoji: "😊", label: "BIEN", value: 6 },
+  { emoji: "🔥", label: "ÑIOS", value: 8 },
+  { emoji: "😍", label: "DE LOCOS", value: 10 },
 ]
 
 export default function PostCineCard({ plan, friends, user, posterUrl, onRate }) {

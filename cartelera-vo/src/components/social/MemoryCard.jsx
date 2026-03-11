@@ -3,11 +3,11 @@ import { useVoseAI } from '../../hooks/useVoseAI.js'
 import { ShareButton } from './ShareableRenderer.jsx'
 
 const RATING_EMOJI = [
-  { min: 1, max: 2, emoji: "💀", label: "Muerte" },
-  { min: 3, max: 4, emoji: "😴", label: "Sueño" },
-  { min: 5, max: 6, emoji: "😐", label: "Meh" },
-  { min: 7, max: 8, emoji: "🔥", label: "Fos" },
-  { min: 9, max: 10, emoji: "😍", label: "PELAZO" },
+  { min: 1, max: 2, emoji: "😴", label: "SUEÑO" },
+  { min: 3, max: 4, emoji: "😐", label: "MEH" },
+  { min: 5, max: 6, emoji: "😊", label: "BIEN" },
+  { min: 7, max: 8, emoji: "🔥", label: "ÑIOS" },
+  { min: 9, max: 10, emoji: "😍", label: "DE LOCOS" },
 ]
 
 function getRatingEmoji(rating) {

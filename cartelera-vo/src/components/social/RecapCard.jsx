@@ -22,6 +22,7 @@ export default function RecapCard({ profile, user, plans, friends, myVotes, isDe
   const [recap, setRecap] = useState(null)
   const [dismissed, setDismissed] = useState(false)
   const [checked, setChecked] = useState(false)
+  const [showShareable, setShowShareable] = useState(false)
 
   const now = new Date()
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -54,7 +55,7 @@ export default function RecapCard({ profile, user, plans, friends, myVotes, isDe
       return d >= lastMonthStart && d < lastMonthEnd
     })
 
-    if (plansLastMonth.length === 0 && watchedLastMonth.length < 1) {
+    if (plansLastMonth.length === 0 && watchedLastMonth.length < 1 && !isDemoMode) {
       return // Not enough activity
     }
 
@@ -198,9 +199,34 @@ export default function RecapCard({ profile, user, plans, friends, myVotes, isDe
 
         {/* Share */}
         <div style={{padding:"0 18px 18px"}}>
-          <ShareButton onClick={() => {}} label="Compartir recap" />
+          <ShareButton onClick={() => setShowShareable(true)} label="Compartir recap" />
         </div>
       </div>
+
+      {/* Shareable overlay */}
+      {showShareable && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:"#000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"13% 20px 18%"}} onClick={() => setShowShareable(false)}>
+          <div style={{width:360,background:"#000",borderRadius:16,padding:"40px 28px",border:"1px solid rgba(201,168,76,0.2)"}} onClick={e => e.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"baseline",gap:0,marginBottom:20}}>
+              <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:14,color:"#fff"}}>VO</span>
+              <span style={{fontFamily:"'Archivo Black',sans-serif",fontSize:14,color:"#ff3b3b"}}>SE</span>
+              <span style={{fontSize:10,fontWeight:600,color:"rgba(201,168,76,0.5)",marginLeft:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Recap</span>
+            </div>
+            <h3 style={{margin:"0 0 16px",fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:18,color:"#fff",lineHeight:1.3,textTransform:"uppercase",textAlign:"center"}}>{recap.title}</h3>
+            <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:16}}>
+              {watchedLastMonth.length > 0 && <span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>🎬 {watchedLastMonth.length} pelis</span>}
+              {plansLastMonth.length > 0 && <span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>🍿 {plansLastMonth.length} planes</span>}
+            </div>
+            <p style={{margin:"0 0 12px",fontSize:13,color:"rgba(255,255,255,0.6)",lineHeight:1.6,fontStyle:"italic",textAlign:"center"}}>"{recap.highlight}"</p>
+            {recap.buddy_comment && <p style={{margin:"0 0 12px",fontSize:11,color:"rgba(201,168,76,0.5)",textAlign:"center"}}>{recap.buddy_comment}</p>}
+            {recap.hot_take && <p style={{margin:"0 0 16px",fontSize:11,color:"rgba(255,59,59,0.5)",textAlign:"center"}}>🔥 {recap.hot_take}</p>}
+            <div style={{paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.06)",textAlign:"center"}}>
+              <p style={{margin:0,fontSize:10,color:"rgba(255,255,255,0.2)"}}>carteleravo.app</p>
+            </div>
+          </div>
+          <button onClick={() => setShowShareable(false)} style={{marginTop:16,padding:"10px 24px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cerrar</button>
+        </div>
+      )}
     </div>
   )
 }
