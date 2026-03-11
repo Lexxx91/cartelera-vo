@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { isPlanPast } from '../../utils.js'
 import PlanSheet from './PlanSheet.jsx'
 import FriendDetailSheet from './FriendDetailSheet.jsx'
 import FriendRequestSheet from './FriendRequestSheet.jsx'
@@ -166,7 +167,9 @@ export default function AmigosTab({
   }, [friends.length]) // refresh when friends change
 
   // Filter plans by state
-  const confirmedPlans = plans.filter(p => getMyState(p) === 'confirmed')
+  const confirmedPlans = plans.filter(p =>
+    getMyState(p) === 'confirmed' && (!p.chosen_session || !isPlanPast(p.chosen_session))
+  )
   const activePlans = plans.filter(p => {
     const s = getMyState(p)
     return s && s !== 'confirmed' && s !== 'no_match'

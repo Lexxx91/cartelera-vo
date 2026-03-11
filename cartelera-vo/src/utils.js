@@ -117,6 +117,16 @@ export function sKey(s) {
   return `${s.date || s.day}||${s.cinema}||${s.time}`
 }
 
+// Check if a confirmed plan's event has passed (+2h buffer for movie duration)
+export function isPlanPast(session) {
+  if (!session?.date || !session?.time) return false
+  const [year, month, day] = session.date.split("-").map(Number)
+  const [hours, minutes] = (session.time || "00:00").split(":").map(Number)
+  if (!year) return false
+  const target = new Date(year, month - 1, day, (hours || 0) + 2, minutes || 0)
+  return Date.now() > target.getTime()
+}
+
 // ─── TMDB enrichment ─────────────────────────────────────────────────────────
 
 const tmdbCache = new Map()

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getAllSessionsForMovie, sKey } from '../../utils.js'
+import { getAllSessionsForMovie, sKey, isPlanPast } from '../../utils.js'
 import RouletteWheel from './RouletteWheel.jsx'
 
 // Open Google Calendar with pre-filled event + invitees
@@ -39,16 +39,6 @@ function formatCountdown(session) {
   if (days > 0) return `${days}d ${hrs}h`
   if (hrs > 0) return `${hrs}h ${mins}m`
   return `${mins}m`
-}
-
-// Check if plan date has passed (+2h buffer for movie duration)
-function isPlanPast(session) {
-  if (!session?.date || !session?.time) return false
-  const [year, month, day] = session.date.split("-").map(Number)
-  const [hours, minutes] = (session.time || "00:00").split(":").map(Number)
-  if (!year) return false
-  const target = new Date(year, month - 1, day, (hours || 0) + 2, minutes || 0)
-  return Date.now() > target.getTime()
 }
 
 // Inline star rating picker

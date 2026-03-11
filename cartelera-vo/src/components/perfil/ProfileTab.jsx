@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import AdminPanel from './AdminPanel.jsx'
 import VocitoCard from '../VocitoCard.jsx'
+import EventHistory from './EventHistory.jsx'
+import WrappedScreen from './WrappedScreen.jsx'
 
-export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa, campaignOverrides, onSaveCampaignOverride, isAdmin, campaignsLoading, onConnectWhatsApp, onUnlinkWhatsApp, waLinking, waLinkError, onRetryWhatsApp, onToggleVocito, onToggleVocitoPref, vocitoState }) {
+export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAvatar, onLogout, myVotes, movies, inviteeCount, pwa, campaignOverrides, onSaveCampaignOverride, isAdmin, campaignsLoading, onConnectWhatsApp, onUnlinkWhatsApp, waLinking, waLinkError, onRetryWhatsApp, onToggleVocito, onToggleVocitoPref, vocitoState, pastPlans, friends }) {
   const { canInstall, isInstalled, isIOS, isIOSChrome, promptInstall } = pwa || {}
   const [editingName, setEditingName] = useState(false)
   const [displayName, setDisplayName] = useState(profile?.nombre_display || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Cinefilo")
@@ -11,7 +13,12 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
   const [avatarLoading, setAvatarLoading] = useState(false)
   const [avatarMsg, setAvatarMsg] = useState(null) // { type: 'success'|'error', text }
   const [copiedSafariLink, setCopiedSafariLink] = useState(false)
+  const [showHistorial, setShowHistorial] = useState(false)
+  const [showWrapped, setShowWrapped] = useState(false)
   const fileInputRef = useRef(null)
+
+  const currentYear = new Date().getFullYear()
+  const hasYearPlans = (pastPlans || []).some(p => p.chosen_session?.date?.startsWith(String(currentYear)))
 
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url
   const email = user?.email
@@ -175,6 +182,68 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
             ))}
           </div>
         </div>
+
+        {/* Historial de eventos button */}
+        <div style={{padding:"0 20px",marginBottom:12}}>
+          <button onClick={() => setShowHistorial(true)} style={{
+            width:"100%",display:"flex",alignItems:"center",gap:14,
+            background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+            borderRadius:16,padding:"14px 16px",cursor:"pointer",fontFamily:"inherit",
+            WebkitTapHighlightColor:"transparent",
+          }}>
+            <div style={{width:36,height:36,borderRadius:10,background:"rgba(255,59,59,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#ff3b3b" strokeWidth="1.5"/>
+                <polyline points="12,6 12,12 16,14" stroke="#ff3b3b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div style={{flex:1,textAlign:"left"}}>
+              <p style={{margin:0,fontSize:14,fontWeight:600,color:"#fff"}}>Historial de eventos</p>
+              <p style={{margin:"2px 0 0",fontSize:11,color:"rgba(255,255,255,0.35)"}}>Tus planes pasados con amigos</p>
+            </div>
+            {(pastPlans || []).length > 0 && (
+              <span style={{
+                background:"rgba(255,59,59,0.15)",color:"#ff3b3b",fontSize:12,fontWeight:700,
+                padding:"3px 8px",borderRadius:8,minWidth:22,textAlign:"center",
+              }}>
+                {(pastPlans || []).length}
+              </span>
+            )}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polyline points="9,18 15,12 9,6" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* VOSE Wrapped card */}
+        {hasYearPlans && (
+          <div style={{padding:"0 20px",marginBottom:20}}>
+            <button onClick={() => setShowWrapped(true)} style={{
+              width:"100%",padding:"18px 20px",borderRadius:20,border:"none",cursor:"pointer",
+              background:"linear-gradient(135deg, #ff3b3b 0%, #cc2020 50%, #991515 100%)",
+              fontFamily:"inherit",position:"relative",overflow:"hidden",
+              WebkitTapHighlightColor:"transparent",textAlign:"left",
+            }}>
+              {/* Decorative circles */}
+              <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,0.08)"}} />
+              <div style={{position:"absolute",bottom:-15,left:-10,width:50,height:50,borderRadius:"50%",background:"rgba(255,255,255,0.05)"}} />
+              <div style={{position:"relative",zIndex:1,display:"flex",alignItems:"center",gap:14}}>
+                <span style={{fontSize:32}}>✨</span>
+                <div>
+                  <p style={{margin:0,fontFamily:"'Archivo Black',sans-serif",fontWeight:400,fontSize:18,color:"#fff",letterSpacing:"0.02em"}}>
+                    WRAPPED {currentYear}
+                  </p>
+                  <p style={{margin:"4px 0 0",fontSize:12,color:"rgba(255,255,255,0.6)"}}>
+                    Descubre tu resumen cinéfilo del año
+                  </p>
+                </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{marginLeft:"auto"}}>
+                  <polyline points="9,18 15,12 9,6" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* PWA Install Card */}
         {(() => {
@@ -501,6 +570,30 @@ export default function ProfileTab({ user, profile, onUpdateProfile, onUploadAva
           />
         )}
       </div>
+
+      {/* Historial overlay */}
+      {showHistorial && (
+        <EventHistory
+          pastPlans={pastPlans || []}
+          friends={friends || []}
+          user={user}
+          movies={movies}
+          onClose={() => setShowHistorial(false)}
+          onShowWrapped={hasYearPlans ? () => { setShowHistorial(false); setShowWrapped(true) } : null}
+        />
+      )}
+
+      {/* Wrapped overlay */}
+      {showWrapped && (
+        <WrappedScreen
+          pastPlans={pastPlans || []}
+          friends={friends || []}
+          user={user}
+          movies={movies}
+          year={currentYear}
+          onClose={() => setShowWrapped(false)}
+        />
+      )}
     </div>
   )
 }

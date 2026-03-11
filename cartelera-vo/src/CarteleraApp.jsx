@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
+import { isPlanPast } from './utils.js'
 
 // Hooks
 import useProfile, { getVocitoState } from './hooks/useProfile.js'
@@ -65,6 +66,9 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
   const friendVotes = isDemoMode ? demo.getDemoFriendVotes() : realVotes.friendVotes
   const plans = isDemoMode ? demo.demoPlans : realPlans.plans
   const getMyState = isDemoMode ? demo.getMyState : realPlans.getMyState
+  const pastPlans = plans.filter(p =>
+    getMyState(p) === 'confirmed' && p.chosen_session && isPlanPast(p.chosen_session)
+  )
 
   // Load fonts
   useEffect(() => {
@@ -487,6 +491,8 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             onToggleVocito={toggleVocito}
             onToggleVocitoPref={updateVocitoPrefs}
             vocitoState={vocitoState}
+            pastPlans={pastPlans}
+            friends={friends}
           />
         )}
       </div>

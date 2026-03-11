@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getAllSessionsForMovie, findNearestSession, sKey } from '../utils.js'
+import { getAllSessionsForMovie, findNearestSession, sKey, isPlanPast } from '../utils.js'
 
 // ─── Demo friends ─────────────────────────────────────────────────────────────
 export const DEMO_FRIEND = {
@@ -73,6 +73,7 @@ export default function useDemo(movies) {
   const planIdCounter = useRef(1)
 
   // Create a pre-existing open plan between Carlos & Lucía once movies load
+  // Also seed 3 past confirmed plans for historial/wrapped demo
   useEffect(() => {
     if (openPlanCreated.current || movies.length === 0) return
     openPlanCreated.current = true
@@ -102,6 +103,76 @@ export default function useDemo(movies) {
         updated_at: new Date().toISOString(),
         isDemo: true,
       }])
+
+      // Seed past confirmed plans for historial demo
+      const now = new Date()
+      const pastMovieTitles = movies.slice(0, 5).map(m => m.title)
+      const pastPlans = [
+        {
+          id: 'demo-past-1',
+          movie_title: pastMovieTitles[0] || 'Dune: Parte Dos',
+          state: 'confirmed',
+          initiator_id: 'demo-local-user',
+          partner_id: DEMO_FRIEND.id,
+          chosen_session: {
+            date: new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0],
+            time: '19:30',
+            cinema: 'Yelmo Las Arenas',
+          },
+          participants: ['demo-local-user', DEMO_FRIEND.id],
+          partner: DEMO_FRIEND,
+          amIInitiator: true,
+          initiator_response: 'yes',
+          partner_response: 'yes',
+          ratings: { 'demo-local-user': { rating: 4, date: new Date(now.getTime() - 6 * 86400000).toISOString().split('T')[0] } },
+          created_at: new Date(now.getTime() - 8 * 86400000).toISOString(),
+          updated_at: new Date(now.getTime() - 7 * 86400000).toISOString(),
+          isDemo: true,
+        },
+        {
+          id: 'demo-past-2',
+          movie_title: pastMovieTitles[1] || 'Anora',
+          state: 'confirmed',
+          initiator_id: DEMO_FRIEND.id,
+          partner_id: 'demo-local-user',
+          chosen_session: {
+            date: new Date(now.getTime() - 14 * 86400000).toISOString().split('T')[0],
+            time: '17:00',
+            cinema: 'Monopol',
+          },
+          participants: ['demo-local-user', DEMO_FRIEND.id, DEMO_FRIEND_LUCIA.id],
+          partner: DEMO_FRIEND,
+          amIInitiator: false,
+          initiator_response: 'yes',
+          partner_response: 'yes',
+          ratings: { 'demo-local-user': { rating: 5, date: new Date(now.getTime() - 13 * 86400000).toISOString().split('T')[0] }, [DEMO_FRIEND.id]: { rating: 4, date: new Date(now.getTime() - 13 * 86400000).toISOString().split('T')[0] } },
+          created_at: new Date(now.getTime() - 15 * 86400000).toISOString(),
+          updated_at: new Date(now.getTime() - 14 * 86400000).toISOString(),
+          isDemo: true,
+        },
+        {
+          id: 'demo-past-3',
+          movie_title: pastMovieTitles[2] || 'The Brutalist',
+          state: 'confirmed',
+          initiator_id: 'demo-local-user',
+          partner_id: DEMO_FRIEND.id,
+          chosen_session: {
+            date: new Date(now.getTime() - 21 * 86400000).toISOString().split('T')[0],
+            time: '20:00',
+            cinema: 'OCine Las Terrazas',
+          },
+          participants: ['demo-local-user', DEMO_FRIEND.id],
+          partner: DEMO_FRIEND,
+          amIInitiator: true,
+          initiator_response: 'yes',
+          partner_response: 'yes',
+          ratings: { 'demo-local-user': { rating: 3, date: new Date(now.getTime() - 20 * 86400000).toISOString().split('T')[0] } },
+          created_at: new Date(now.getTime() - 22 * 86400000).toISOString(),
+          updated_at: new Date(now.getTime() - 21 * 86400000).toISOString(),
+          isDemo: true,
+        },
+      ]
+      setDemoPlans(prev => [...prev, ...pastPlans])
     })()
   }, [movies])
 
