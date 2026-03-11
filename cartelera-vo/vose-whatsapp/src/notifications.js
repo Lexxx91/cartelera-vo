@@ -52,6 +52,7 @@ export async function handlePlanChange(sock, payload) {
   if (eventType === 'INSERT' && plan.state === 'proposed') {
     const initiator = await getJid(plan.initiator_id)
     const partner = await getJid(plan.partner_id)
+    if (!partner) return
 
     if (shouldNotify(partner, 'MATCH')) {
       const initiatorName = initiator?.nombre_display || 'Alguien'
@@ -102,6 +103,7 @@ export async function handlePlanChange(sock, payload) {
 
     const whoSaidNoProfile = await getJid(whoSaidNo)
     const other = await getJid(otherId)
+    if (!other) return
 
     if (shouldNotify(other, 'SESSION_REJECTED')) {
       const name = whoSaidNoProfile?.nombre_display || 'Tu amigo'
@@ -126,6 +128,7 @@ export async function handlePlanChange(sock, payload) {
 
     const sender = await getJid(senderId)
     const receiver = await getJid(receiverId)
+    if (!receiver) return
 
     if (shouldNotify(receiver, 'AVAILABILITY_SENT')) {
       const name = sender?.nombre_display || 'Tu amigo'

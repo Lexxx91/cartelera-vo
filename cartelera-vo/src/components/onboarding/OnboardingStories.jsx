@@ -531,6 +531,13 @@ function StoryNoPingPong() {
 /* STORY 4: VOCITO                        */
 /* ═══════════════════════════════════════ */
 function StoryVocito({ onConnect, onSkip }) {
+  // Delay button interactivity so taps can't hit invisible buttons
+  const [ctaReady, setCtaReady] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setCtaReady(true), 9000) // match animation delay (8.7s) + buffer
+    return () => clearTimeout(t)
+  }, [])
+
   // Phase 2 delays (after Phase 1 fades at 5.3s)
   const waBubbles = [
     { text: "🎬 Ey! Dune 3 en VOSE ya esta en cartelera", delay: 6.5 },
@@ -677,6 +684,7 @@ function StoryVocito({ onConnect, onSkip }) {
           display: "flex", flexDirection: "column", gap: 10,
           marginTop: 24,
           animation: "fadeInUp 0.4s ease-out 8.7s both",
+          pointerEvents: ctaReady ? "auto" : "none",
         }}
       >
         <button onClick={onConnect} style={{

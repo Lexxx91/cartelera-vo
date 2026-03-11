@@ -140,7 +140,7 @@ export default function FriendDetailSheet({
             <p style={{margin:"0 0 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.1em"}}>
               En comun
             </p>
-            <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4,scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+            <div style={{display:"flex",gap:10,overflowX:"auto",overflowY:"hidden",paddingBottom:4,scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x",overscrollBehavior:"contain"}}>
               {moviesInCommon.slice(0, 10).map(m => {
                 const poster = getPoster(m.title)
                 return (

@@ -482,6 +482,7 @@ export default function CarteleraApp({ user, onLogout, pendingPlanJoin, onClearP
             vocitoState={vocitoState}
             onConnectWhatsApp={generateWhatsAppToken}
             onUpdateProfile={updateProfile}
+            myVotes={myVotes}
           />
         )}
         {tab === "squad" && (

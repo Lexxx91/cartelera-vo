@@ -114,7 +114,11 @@ export default function PlanSheet({ plan, myState, partnerName, onRespondYes, on
     if (myState === 'pick_avail') {
       setLoadingSessions(true)
       getAllSessionsForMovie(plan.movie_title).then(s => {
-        setAllSessions(s)
+        setAllSessions(s || [])
+      }).catch(err => {
+        console.error('Failed to load sessions:', err)
+        setAllSessions([])
+      }).finally(() => {
         setLoadingSessions(false)
       })
     }

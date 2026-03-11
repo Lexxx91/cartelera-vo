@@ -477,7 +477,7 @@ export default function AmigosTab({
         {friendSuggestions.length > 0 && (
           <div style={{marginBottom:12}}>
             <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Tus amigos quieren ver</p>
-            <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+            <div style={{display:"flex",gap:12,overflowX:"auto",overflowY:"hidden",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x",overscrollBehavior:"contain"}}>
               {friendSuggestions.map(({ movieTitle, voters }) => {
                 const poster = getPoster(movieTitle)
                 return (

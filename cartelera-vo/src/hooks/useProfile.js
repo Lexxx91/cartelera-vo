@@ -80,6 +80,17 @@ export default function useProfile(user) {
         }
 
         const { error: insertError } = await supabase.from("perfiles").insert(newProfile)
+
+        // Auto-create friendship with inviter (accepted = instant friends)
+        if (!insertError && inviter) {
+          await supabase.from("amistades").insert({
+            user_a: user.id,
+            user_b: inviter.id,
+            status: 'accepted',
+          }).then(({ error: friendError }) => {
+            if (friendError) console.warn('Auto-friendship failed (may already exist):', friendError.message)
+          })
+        }
         if (insertError) {
           console.error('Profile creation failed:', insertError)
           localStorage.removeItem('vose_has_account')

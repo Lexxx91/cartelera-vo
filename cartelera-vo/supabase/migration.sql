@@ -589,5 +589,15 @@ WHERE whatsapp_jid IS NOT NULL
   AND vocito_activo IS NULL;
 
 -- ============================================================================
+-- 16. Supabase Realtime — Enable for WhatsApp notifications
+-- ============================================================================
+
+-- CRITICAL: Without this, the WhatsApp bot's Realtime subscription
+-- receives NO events for plan changes or friend requests.
+-- Run this in Supabase Dashboard → SQL Editor:
+ALTER PUBLICATION supabase_realtime ADD TABLE planes;
+ALTER PUBLICATION supabase_realtime ADD TABLE amistades;
+
+-- ============================================================================
 -- Done! Verify with: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 -- ============================================================================

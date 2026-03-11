@@ -14,6 +14,10 @@ import { handleFreeform } from './handlers/freeform.js'
 // Supports both plain "vose-abc123" and branded "...Mi codigo: vose-abc123"
 const TOKEN_REGEX = /vose-([a-zA-Z0-9]+)/i
 
+// Rate limit: max 1 freeform message per 3s per user (prevents Claude API abuse)
+const lastFreeformTime = new Map()
+const FREEFORM_COOLDOWN = 3000
+
 export function setupListener(sock) {
   // Remove previous listener to avoid duplicates on reconnect
   sock.ev.removeAllListeners('messages.upsert')
@@ -34,15 +38,22 @@ export function setupListener(sock) {
 
       console.log(`📥 ← ${jid.split('@')[0]}: ${text.slice(0, 60)}`)
 
-      // Route 1: Token linking
-      const tokenMatch = text.trim().match(TOKEN_REGEX)
-      if (tokenMatch) {
-        await handleOnboarding(sock, jid, tokenMatch[1])
-        continue
-      }
+      try {
+        // Route 1: Token linking
+        const tokenMatch = text.trim().match(TOKEN_REGEX)
+        if (tokenMatch) {
+          await handleOnboarding(sock, jid, tokenMatch[1])
+          continue
+        }
 
-      // Route 2: Freeform — Claude-powered conversational AI
-      await handleFreeform(sock, jid, text)
+        // Route 2: Freeform — Claude-powered conversational AI
+        const lastTime = lastFreeformTime.get(jid) || 0
+        if (Date.now() - lastTime < FREEFORM_COOLDOWN) continue
+        lastFreeformTime.set(jid, Date.now())
+        await handleFreeform(sock, jid, text)
+      } catch (err) {
+        console.error(`💥 Message handler error (${jid.split('@')[0]}):`, err.message || err)
+      }
     }
   })
 

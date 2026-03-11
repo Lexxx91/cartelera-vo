@@ -62,10 +62,11 @@ function PlanCarousel({ plans, getPoster, friends, user, onSelect }) {
       ref={scrollRef}
       onScroll={handleScroll}
       style={{
-        display:"flex",gap:16,overflowX:"auto",
+        display:"flex",gap:16,overflowX:"auto",overflowY:"hidden",
         padding:`0 ${plans.length === 1 ? '20px' : 'calc((100% - 85%) / 2)'}`,
         scrollSnapType:"x mandatory",scrollbarWidth:"none",
         WebkitOverflowScrolling:"touch",marginBottom:12,
+        touchAction:"pan-x",overscrollBehavior:"contain",
       }}
     >
       {plans.map((plan, i) => {
@@ -201,6 +202,7 @@ export default function PlanesTab({
   isDemoMode, movies,
   onMarkWatched, onSavePayer, onShowShareCard, onSaveRating, onLeavePlan,
   vocitoState, onConnectWhatsApp, onUpdateProfile,
+  myVotes,
 }) {
   const [activePlan, setActivePlan] = useState(null)
   const [vocitoNudgeDismissed, setVocitoNudgeDismissed] = useState(false)
@@ -237,7 +239,13 @@ export default function PlanesTab({
   // Combine "my plans" = confirmed (future) + active negotiations
   const myPlans = [...confirmedPlans, ...activePlans]
 
-  const hasContent = postCinePlans.length > 0 || myPlans.length > 0 || openPlans.length > 0 || friendSuggestions.length > 0
+  // Movies I voted "voy" on but have no plan for yet
+  const moviesWithPlans = new Set(plans.filter(p => getMyState(p) !== 'no_match').map(p => p.movie_title))
+  const myVoyWithoutPlan = Object.entries(myVotes || {})
+    .filter(([title, vote]) => vote === 'voy' && !moviesWithPlans.has(title))
+    .map(([title]) => title)
+
+  const hasContent = postCinePlans.length > 0 || myPlans.length > 0 || openPlans.length > 0 || friendSuggestions.length > 0 || myVoyWithoutPlan.length > 0
 
   // Handle post-cine rating
   function handlePostCineRate(plan, rating) {
@@ -452,7 +460,7 @@ export default function PlanesTab({
         {friendSuggestions.length > 0 && (
           <div style={{marginBottom:12}}>
             <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Tu gente quiere ver esto</p>
-            <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+            <div style={{display:"flex",gap:12,overflowX:"auto",overflowY:"hidden",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x",overscrollBehavior:"contain"}}>
               {friendSuggestions.map(({ movieTitle, voters }) => {
                 const poster = getPoster(movieTitle)
                 return (
@@ -471,6 +479,33 @@ export default function PlanesTab({
                         ))}
                       </div>
                     </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* MIS VOTOS — movies I voted "voy" on but no plan yet */}
+        {myVoyWithoutPlan.length > 0 && (
+          <div style={{marginBottom:12}}>
+            <p style={{margin:"0 0 10px",padding:"0 20px",fontSize:12,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Quiero ver</p>
+            <div style={{display:"flex",gap:12,overflowX:"auto",overflowY:"hidden",padding:"0 20px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x",overscrollBehavior:"contain"}}>
+              {myVoyWithoutPlan.map(title => {
+                const poster = getPoster(title)
+                return (
+                  <div key={title} onClick={() => onSwitchToCartelera()} style={{flexShrink:0,width:100,cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                    <div style={{width:100,height:150,borderRadius:12,overflow:"hidden",position:"relative",background:"linear-gradient(145deg,#1a1a1a,#111)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                      {poster && <img src={poster} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy" />}
+                      <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%)"}} />
+                      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 8px"}}>
+                        <p style={{margin:0,fontSize:10,fontWeight:400,fontFamily:"'Archivo Black',sans-serif",color:"#fff",lineHeight:1.2,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{title}</p>
+                      </div>
+                      <div style={{position:"absolute",top:6,right:6,background:"rgba(255,59,59,0.15)",border:"1px solid rgba(255,59,59,0.3)",borderRadius:6,padding:"2px 6px"}}>
+                        <span style={{fontSize:9,fontWeight:700,color:"#ff3b3b"}}>VOY</span>
+                      </div>
+                    </div>
+                    <p style={{margin:"4px 0 0",fontSize:10,color:"rgba(255,255,255,0.25)",textAlign:"center"}}>Esperando match</p>
                   </div>
                 )
               })}

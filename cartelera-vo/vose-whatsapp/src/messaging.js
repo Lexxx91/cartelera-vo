@@ -29,11 +29,15 @@ export async function sendText(sock, jid, text) {
     await delay(MIN_INTERVAL_DIFF - sinceGlobal + randomMs(500, 2000))
   }
 
-  // Simulate "typing..."
-  await sock.presenceSubscribe(jid)
-  await sock.sendPresenceUpdate('composing', jid)
-  await delay(500 + randomMs(300, 1500))
-  await sock.sendPresenceUpdate('paused', jid)
+  // Simulate "typing..." (non-critical, don't crash if presence fails)
+  try {
+    await sock.presenceSubscribe(jid)
+    await sock.sendPresenceUpdate('composing', jid)
+    await delay(500 + randomMs(300, 1500))
+    await sock.sendPresenceUpdate('paused', jid)
+  } catch {
+    // Presence APIs can fail without affecting message delivery
+  }
 
   // Send
   await sock.sendMessage(jid, { text })
