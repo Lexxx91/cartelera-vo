@@ -1,61 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { SUPABASE_URL, SUPABASE_ANON } from '../../constants.js'
+import { CAMPAIGNS, getActiveCampaign } from '../../campaigns.js'
 
 // ─── Brick Breaker — Cinema Edition ──────────────────────────────────────────
 // Canvas game with levels + leaderboard backed by Supabase game_scores table
-
-// ─── Brand Campaigns ────────────────────────────────────────────────────────
-// Cada campaña tiene: id, fechas, assets y tema visual.
-// Cuando no hay campaña activa → se usa el juego original sin cambios.
-const CAMPAIGNS = [
-  {
-    id: 'gofio-lapina',
-    startDate: '2026-03-09',
-    endDate: '2026-04-10',
-    brickImage: '/brands/gofio-lapina.png',
-    multiHitImage: '/brands/gofio-lapina-fuerte.png',
-    brickCols: 9,
-    // Source crop: just the package, no white margins (from 1000x1000 PNG)
-    // brickHeight se calcula automáticamente de sw/sh para no estirar la imagen
-    imageCrop: { sx: 160, sy: 10, sw: 680, sh: 980 },
-    dustColors: ['#d4a748', '#c9953a', '#e8c87a', '#b8862d', '#f0d88f'],
-    ball: {
-      type: 'stone',
-      colors: { center: '#a89880', mid: '#8c7a68', edge: '#6b5d50', rim: '#4a3f35' },
-      trail: 'rgba(140,130,115,0.2)',
-    },
-  },
-  {
-    id: 'clipper',
-    startDate: '2026-04-11',
-    endDate: '2026-05-10',
-    brickImage: '/brands/clipper-naranja.png',
-    multiHitImage: '/brands/clipper-fresa.png',
-    brickCols: 9,
-    // Can bounds: ~274,1 → 927,1200 in both 1200×1200 PNGs
-    imageCrop: { sx: 270, sy: 0, sw: 660, sh: 1200 },
-    dustColors: ['#ff8c00', '#ff6b35', '#ffa559', '#e85d26', '#ffb380'],
-    ball: {
-      type: 'stone',
-      colors: { center: '#ffb347', mid: '#ff8c00', edge: '#e67300', rim: '#cc5500' },
-      trail: 'rgba(255,140,0,0.2)',
-    },
-  },
-]
-
-function getActiveCampaign(overrides = []) {
-  const today = new Date().toISOString().slice(0, 10)
-  return CAMPAIGNS.find(c => {
-    const ov = overrides.find(o => o.id === c.id)
-    if (ov && ov.active === false) return false // admin disabled it
-    // Modo instant: active + sin fechas = siempre activa
-    if (ov && ov.active === true && !ov.start_date && !ov.end_date) return true
-    // Modo programada: comprobar rango de fechas
-    const start = ov?.start_date || c.startDate
-    const end = ov?.end_date || c.endDate
-    return today >= start && today <= end
-  }) || null
-}
 
 // ─── Game constants ─────────────────────────────────────────────────────────
 const BRICK_PAD = 4
@@ -676,7 +624,7 @@ export default function BrickBreaker({ user, onClose, campaignOverrides }) {
       // Save score (upsert — only if higher)
       if (!isDemoMode && user?.id) {
         const currentRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/game_scores?user_id=eq.${user.id}&select=score`,
+          `${SUPABASE_URL}/rest/v1/game_scores?user_id=eq.${user.id}&game_type=eq.breakout&select=score`,
           { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
         )
         const current = await currentRes.json()
@@ -691,14 +639,14 @@ export default function BrickBreaker({ user, onClose, campaignOverrides }) {
               'Content-Type': 'application/json',
               Prefer: 'resolution=merge-duplicates',
             },
-            body: JSON.stringify({ user_id: user.id, score: finalScore }),
+            body: JSON.stringify({ user_id: user.id, score: finalScore, game_type: 'breakout' }),
           })
         }
       }
 
       // Load leaderboard
       const lbRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/leaderboard?order=score.desc&limit=10`,
+        `${SUPABASE_URL}/rest/v1/leaderboard?game_type=eq.breakout&order=score.desc&limit=10`,
         { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
       )
       if (lbRes.ok) {

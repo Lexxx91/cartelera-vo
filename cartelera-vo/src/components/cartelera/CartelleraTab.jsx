@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import SwipeCard from './SwipeCard.jsx'
 import BrickBreaker from './BrickBreaker.jsx'
+import SnakeGame from './SnakeGame.jsx'
+import { getActiveCampaign } from '../../campaigns.js'
 
 export default function CartelleraTab({ movies, loading, error, myVotes, friendVotes, onSwipe, user, campaignOverrides, onUndoVote }) {
   const [swiped, setSwiped] = useState({})
@@ -121,12 +123,16 @@ export default function CartelleraTab({ movies, loading, error, myVotes, friendV
           </div>
         )}
 
-        {/* Brick Breaker game */}
-        {!loading && !error && remaining.length === 0 && movies.length > 0 && showGame && (
-          <div style={{flex:1,display:"flex",flexDirection:"column",padding:"0 4px",minHeight:0,maxHeight:"calc(100vh - 56px - 56px - 20px)",animation:"fadeIn 0.3s ease"}}>
-            <BrickBreaker user={user} onClose={() => setShowGame(false)} campaignOverrides={campaignOverrides} />
-          </div>
-        )}
+        {/* Game — route to Snake or BrickBreaker based on active campaign */}
+        {!loading && !error && remaining.length === 0 && movies.length > 0 && showGame && (() => {
+          const activeCampaign = getActiveCampaign(campaignOverrides)
+          const GameComponent = activeCampaign?.gameType === 'snake' ? SnakeGame : BrickBreaker
+          return (
+            <div style={{flex:1,display:"flex",flexDirection:"column",padding:"0 4px",minHeight:0,maxHeight:"calc(100vh - 56px - 56px - 20px)",animation:"fadeIn 0.3s ease"}}>
+              <GameComponent user={user} onClose={() => setShowGame(false)} campaignOverrides={campaignOverrides} />
+            </div>
+          )
+        })()}
 
         {!loading && !error && remaining.length > 0 && (
           <>

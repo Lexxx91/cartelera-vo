@@ -1,24 +1,5 @@
 import { useState } from 'react'
-
-// All campaigns defined in BrickBreaker — keep synced
-const CAMPAIGN_CATALOG = [
-  {
-    id: 'gofio-lapina',
-    name: 'Gofio La Piña',
-    brand: 'La Piña',
-    emoji: '🌾',
-    color: '#d4a748',
-    preview: '/brands/gofio-lapina.png',
-  },
-  {
-    id: 'clipper',
-    name: 'Clipper',
-    brand: 'Clipper',
-    emoji: '🥤',
-    color: '#ff8c00',
-    preview: '/brands/clipper-naranja.png',
-  },
-]
+import { CAMPAIGN_CATALOG } from '../../campaigns.js'
 
 export default function AdminPanel({ overrides, onSaveOverride, loading }) {
   const [editingId, setEditingId] = useState(null)
